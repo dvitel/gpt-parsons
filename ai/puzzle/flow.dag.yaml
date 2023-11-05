@@ -35,7 +35,7 @@ nodes:
     topic: ${inputs.topic}
     form: ${inputs.form}
     numBugs: ${inputs.numBugs}
-  connection: prod-conn
+  connection: prod_conn
   api: chat
 - name: validate_gen
   type: python
