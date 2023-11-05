@@ -1,0 +1,46 @@
+$schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
+environment:
+  python_requirements_txt: requirements.txt
+inputs:
+  language:
+    type: string
+    default: Python
+  level:
+    type: string
+    default: Intermediate
+  topic:
+    type: string
+    default: Loops, inner loops
+  form:
+    type: string
+    default: Python function
+  numBugs:
+    type: int
+    default: 1
+outputs:
+  gen:
+    type: string
+    reference: ${validate_gen.output}
+nodes:
+- name: gen_program
+  type: llm
+  source:
+    type: code
+    path: gen_program.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+    language: ${inputs.language}
+    level: ${inputs.level}
+    topic: ${inputs.topic}
+    form: ${inputs.form}
+    numBugs: ${inputs.numBugs}
+  connection: dvitel-paid-personal
+  api: chat
+- name: validate_gen
+  type: python
+  source:
+    type: code
+    path: post_process.py
+  inputs:
+    input1: ${gen_program.output}

@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>GPT-Parsons Puzzles</title>      
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">    
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" type="text/css" href="./css/eclipse.css">
+        <link rel="stylesheet" type="text/css" href="./css/styles.css">
+    </head>
+    <body>
+        <nav class="navbar navbar-dark bg-dark">
+            <div class="container">
+                <div class="col col-lg-8 offset-lg-2 justify-content-between navbar-brand" style="padding-left: 5px; padding-bottom: 0;">
+                    <div style="display: inline-block; vertical-align: top;">
+                        <a href="#" style="margin-right: .1em; color: white">
+                            <i class="fas fa-puzzle-piece" style="font-size: 120%"></i>
+                        </a>
+                    </div>
+                    <div class="evHeader" style="display: inline-block">
+                        <span>GPT-Parsons Puzzles</span> <br/>
+                        <span class="small">Parsons puzzles generated with OpenAI GPT-4</span>
+                    </div>
+                    <div class="score noneD">
+                        Solved: <span class="scoreHolder">0</span>
+                    </div>
+                    <div style="clear: both"></div>
+                </div>
+            </div>
+        </nav>
+        <div class="loginContent container">
+            <div class="form-group row">
+                <div class="col col-lg-8 offset-lg-2">
+                    <input type="text" id="email" class="form-control" placeholder="Write your email address here" />
+                    <span id="emailRequired">Email is required</span>
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col col-lg-8 offset-lg-2">
+                    <input type="password" id="secret" class="form-control" placeholder="Write your secret here" />
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col col-lg-8 offset-lg-2">
+                    <input type="text" id="instructorEmail" class="form-control" placeholder="Write your instructor email address here" />
+                </div>
+            </div>
+            <div class="form-group row">
+                <div class="col col-lg-8 offset-lg-2">
+                    <button class="btn btn-primary" type="button" id="loginButton">Start</button>
+                </div>
+            </div>
+        </div>
+        <div class="puzzleContent">       
+            <div class="scoreSmall">
+                solved: <span class="scoreHolder">0</span>
+            </div>            
+            <div class="container">
+                <div class="row">
+                    <div id="puzzleTitle" class='col col-lg-8 offset-lg-2'></div>
+                </div>
+                <div class="row">
+                    <div id="puzzleDesc" class='col col-lg-8 offset-lg-2'></div>
+                </div>
+                <div class="row">
+                    <div class="col col-lg-8 offset-lg-2">
+                        <ul id="taskPane">
+                        </ul>
+                    </div>
+                </div>
+                <div class="row" id="trashed">                    
+                    <div class="col col-lg-8 offset-lg-2">
+                        <div>Trashed:</div>
+                        <ul id="trashedList">
+                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col col-lg-8 offset-lg-2 form-group">
+                        <button type="button" class="btn btn-primary" id="nextButton">Submit</button>
+                        <button type="button" class="btn" id="giveUpButton">GiveUp</button>
+                        <!-- <button type="button" class="btn" id="progressButton">My Progress</button>                            -->
+                        <button type="button" class="btn" id="gridButton">Grid</button>
+                    </div>
+                </div>                
+            </div>    
+        </div>  
+        <div id="message">
+            <div class="container" style="padding-top: 1ex;">
+            <div class="row">
+                <div class="alert alert-success col col-lg-8 offset-lg-2" role="alert" id="correctMsg">
+                    <strong>Well done!</strong> You solved it.
+                </div>
+                <div class="alert alert-warning col col-lg-8 offset-lg-2" role="alert" id="giveUpMsg">
+                        <strong>Good luck next time</strong>
+                    </div>                
+                <div class="alert alert-danger col col-lg-8 offset-lg-2" role="alert" id="wrongMsg">
+                    <strong>Oh snap!</strong> Change a few things up and try submitting again.
+                    <!-- <button type="button" class="btn" id="hintButton">Hint</button> -->
+                </div>
+                <div class="alert alert-danger col col-lg-8 offset-lg-2" role="alert" id="hasBug">
+                    <strong>Bug!</strong> Code is ordered correctly. Try to find bugged fragment
+                </div>  
+                <div class="alert alert-success col col-lg-8 offset-lg-2" role="alert" id="hintOk">
+                    <strong>Ok!</strong> Looks like you can submit solution
+                </div>                
+            </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script src="js/script.js"></script>
+    </body>
+</html>
