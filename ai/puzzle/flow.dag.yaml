@@ -17,11 +17,21 @@ inputs:
   numBugs:
     type: int
     default: 1
+  key:
+    type: string
+    default: ""
 outputs:
   gen:
     type: string
     reference: ${validate_gen.output}
 nodes:
+- name: preprocess
+  type: python
+  source:
+    type: code
+    path: preprocess.py
+  inputs:
+    key: ${inputs.key}
 - name: gen_program
   type: llm
   source:
@@ -37,6 +47,9 @@ nodes:
     numBugs: ${inputs.numBugs}
   connection: prod_conn
   api: chat
+  activate:
+    when: ${preprocess.output.auth}
+    is: true
 - name: validate_gen
   type: python
   source:
@@ -44,3 +57,5 @@ nodes:
     path: post_process.py
   inputs:
     input1: ${gen_program.output}
+    auth: ${preprocess.output.auth}
+    language: ${inputs.language}
