@@ -29,23 +29,23 @@ def validate_gen(input1: str) -> str:
         code = generated["code"]
         print(f"Syntax error in model code: {e}. Code: {code}")
         return {"error": "SyntaxError", "message": f"Error {e} in {code}"}
-    code_lines = generated["code"].split("\\n")
-    bugged_lines = generated["bugged"].split("\\n")
-    #TODO: dynamic programming to figure out best alignment between correct and bugged lines 
-    # lines = []
-    # i = 0
-    # j = 0 
-    # while i < len(code_lines):
-    #     if j >= len(bugged_lines) or code_lines[i] == bugged_lines[j]:
-    #         lines.append({"correct": code_lines[i]})
-    #         i = i + 1 
-    #         j = j + 1 
-    #     else: 
-    #         start_j = j 
-    #         while j < len(bugged_lines) and code_lines[i] != bugged_lines[j]:
-    #             j = j + 1             
-    #         lines.append({"correct": code_lines[i], "bugged": "\\n".join(bugged_lines[start_j:j])})
-    # del generated["code"]
-    # del generated["bugged"]
-    generated["lines"] = lines 
+    # code_lines = generated["code"].split("\\n")
+    # bugged_lines = generated["bugged"].split("\\n")
+    # #TODO: dynamic programming to figure out best alignment between correct and bugged lines 
+    # # lines = []
+    # # i = 0
+    # # j = 0 
+    # # while i < len(code_lines):
+    # #     if j >= len(bugged_lines) or code_lines[i] == bugged_lines[j]:
+    # #         lines.append({"correct": code_lines[i]})
+    # #         i = i + 1 
+    # #         j = j + 1 
+    # #     else: 
+    # #         start_j = j 
+    # #         while j < len(bugged_lines) and code_lines[i] != bugged_lines[j]:
+    # #             j = j + 1             
+    # #         lines.append({"correct": code_lines[i], "bugged": "\\n".join(bugged_lines[start_j:j])})
+    # # del generated["code"]
+    # # del generated["bugged"]
+    # generated["lines"] = lines 
     return generated

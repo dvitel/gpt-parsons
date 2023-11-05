@@ -35,7 +35,7 @@ nodes:
     topic: ${inputs.topic}
     form: ${inputs.form}
     numBugs: ${inputs.numBugs}
-  connection: dvitel-paid-personal
+  connection: prod-conn
   api: chat
 - name: validate_gen
   type: python
