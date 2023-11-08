@@ -3,7 +3,7 @@ import azure.functions as func
 import logging
 import uuid
 import json
-
+from utils import best_alignment
 #TODO: validation for all funcs: json schema and OpenAPI 3.1
 
 app = func.FunctionApp(http_auth_level=func.AuthLevel.ANONYMOUS)
@@ -43,3 +43,31 @@ def get_session(req: func.HttpRequest, docs: func.DocumentList) -> func.HttpResp
     doc: func.Document = docs[0]
     session_data = doc.to_dict()
     return ok({"id": session_data["id"], "name": session_data["name"]})
+
+#Following triggers are async processing of exercises
+#Async flow is triggered either by admin or timer Azure function
+
+@app.cosmos_db_trigger(arg_name="docs", connection="CosmosDbConnectionString", database_name="gpt-parsons-db",
+                        container_name="exercise_raw", lease_container_name="exercise_raw_leases", create_lease_container_if_not_exists=True)
+@app.cosmos_db_output(arg_name="out_doc", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", container_name="parsons_exercise")
+def prepare_exercise(docs: func.DocumentList, out_doc:func.Out[func.Document]):
+    ''' Process GPT output and forms fragments. Exercises are stored for later uses by session '''
+    for doc in docs:
+        ex = doc.to_dict()
+        ex_id = ex['id']
+        correct = ex["code"]
+        bugged = ex["bugged"]
+        # alignment = best_alignment(correct, bugged)
+        
+        # Example: correct: a b c d, bugged: a c d (no distractor)
+        #                  set { a b c d } 
+        # fragments: [a, b, c, d] distractors [X]. OR [ab, c, d] distractors: [x] OR [ab, cd] distractors: [xd]
+
+        
+
+        # TODO 1: finish minimal fragmentation impl based on the alignment 
+        # TODO 2: fetch instructor settings of desired number of fragments and split some fragments further
+
+        output = {"fragments": [], "distractors": []}
+        out_doc.set(func.Document.from_dict(output)) #output to parsons_exercise
+        logging.info(f"Processed ex: {ex_id}")
