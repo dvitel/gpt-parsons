@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <title>GPT-Parsons Puzzles Admin</title>      
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">    
+        <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    </head>
+    <body>
+        <div class="container mt-md-5">
+            <div class="row justify-content-center w-100">          
+                <div class="mx-0 mx-sm-1 col-12 col-md-8 mb-md-5" >
+                    <h1>
+                        GPT-Parsons config
+                    </h1>
+                    <p>Trigger generation of the exercises asynchronously to the student flow</p>
+                    <form id="admin-form" action="https://gpt-parsons.azurewebsites.net/api/exercise" method="post">
+                        <div class="mb-2">
+                            <label for="key">GPT-Parsons API key</label>
+                            <input name="key" id="key" type="text" value="" class="form-control" placeholder="Enter key here..." />
+                        </div>
+                        <div class="mb-2">
+                            <label for="language">Programming language</label>
+                            <select name="language" id="language" class="form-select">
+                                <option value="Python">Python</option>
+                                <option disabled>TBD</option>
+                            </select>
+                        </div>
+                        <div class="mb-2">
+                            <label for="topic">Topic</label>
+                            <input name="topic" id="topic" type="text" class="form-control" value="" placeholder="Loops, recursion, comprehensions, data structures, lists, trees ... " />
+                        </div>
+                        <div class="mb-2">
+                            <label for="form">Desired form of exercise</label>
+                            <input name="form" id="form" type="text" class="form-control" value="" placeholder="function, class, expression, formula, ... " />
+                        </div>
+                        <div class="mb-2">
+                            <label for="level">Difficulty level</label>
+                            <select name="level" id="level" class="form-select">
+                                <option value="Beginner">Beginner</option>
+                                <option value="Intermediate">Intermediate</option>
+                                <option value="Advanced">Advanced</option>
+                            </select>
+                        </div>     
+                        <button type="submit" id="submit-button" class="btn btn-primary">Submit</button>
+                        <div class="alert alert-danger d-none py-2" id="error" role="alert">
+                            Error sending request. Check console logs...
+                        </div>
+                        <div class="progress d-none" id="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
+                            <div class="progress-bar progress-bar-striped progress-bar-animated w-100">generation is in progress...</div>
+                        </div>
+                        <div class="alert alert-success d-none py-2" id="success" role="alert">
+                            Exercise generation done
+                        </div>                                                                                                
+                    </form>
+                </div>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+        <script src="script.js"></script>
+    </body>
+</html>
