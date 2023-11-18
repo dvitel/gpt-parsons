@@ -58,4 +58,3 @@ nodes:
   inputs:
     input1: ${gen_program.output}
     auth: ${preprocess.output.auth}
-    language: ${inputs.language}
