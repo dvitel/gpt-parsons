@@ -10,8 +10,8 @@ Objects and relations: {{from}}
 Student knowledge level: {{level}}
 Number of premises: {{complexity}}
 Number of untrue: {{numErrors}}
-{% if avoid | length > 0 %}
+{% if avoid | length > 0 -%}
 Avoid: {{ avoid|join(',') }}
-{% endif %}
+{%- endif %}
 
 output: 

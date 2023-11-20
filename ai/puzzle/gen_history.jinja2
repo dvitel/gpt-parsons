@@ -10,8 +10,8 @@ The events should include: {{form}}
 Student knowledge level: {{level}}
 Number of events: {{complexity}}
 Number of untrue: {{numErrors}}
-{% if avoid | length > 0 %}
+{% if avoid | length > 0 -%}
 Avoid: {{ avoid|join(',') }}
-{% endif %}
+{%- endif %}
 
 output: 

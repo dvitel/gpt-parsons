@@ -7,12 +7,16 @@ Output has up to 5 tests to cover corner cases
 user:
 
 The exercise should be about: {{topic}}
-The code should be in form: {{form}}
+The solution correct code should be in form: {{form}}
 Student knowledge level: {{level}}
+{% if complexity > 0 -%}
 Approximate number of lines: {{complexity}}
-Number of bugs in bugged: {{numBugs}}
-{% if avoid | length > 0 %}
+{%- endif %}
+{% if numBugs > 0 -%}
+Number of bugs in incorrect: {{numBugs}}
+{%- endif %}
+{% if avoid | length > 0 -%}
 Avoid: {{ avoid|join(',') }}
-{% endif %}
+{%- endif %}
 
 output: 

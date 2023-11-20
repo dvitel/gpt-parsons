@@ -4,25 +4,25 @@ environment:
 inputs:
   domain:
     type: string
-    default: History
+    default: Programming
   level:
     type: string
-    default: Intermediate
+    default: Advanced
   topic:
     type: string
-    default: History of French revolution
+    default: Python language, recursion
   form:
     type: string
-    default: historic figures
+    default: function, should contain map
   numErrors:
     type: int
-    default: 2
+    default: 0
   key:
     type: string
     default: ""
   complexity:
     type: int
-    default: 5
+    default: 0
   avoid:
     type: list
     default: []
