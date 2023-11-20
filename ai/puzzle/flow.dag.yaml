@@ -2,28 +2,34 @@ $schema: https://azuremlschemas.azureedge.net/promptflow/latest/Flow.schema.json
 environment:
   python_requirements_txt: requirements.txt
 inputs:
-  language:
+  domain:
     type: string
-    default: Python
+    default: History
   level:
     type: string
     default: Intermediate
   topic:
     type: string
-    default: Loops, inner loops
+    default: History of French revolution
   form:
     type: string
-    default: Python function
-  numBugs:
+    default: historic figures
+  numErrors:
     type: int
-    default: 1
+    default: 2
   key:
     type: string
     default: ""
+  complexity:
+    type: int
+    default: 5
+  avoid:
+    type: list
+    default: []
 outputs:
   gen:
     type: string
-    reference: ${validate_gen.output}
+    reference: ${postprocess.output}
 nodes:
 - name: preprocess
   type: python
@@ -32,6 +38,7 @@ nodes:
     path: preprocess.py
   inputs:
     key: ${inputs.key}
+    domain: ${inputs.domain}
 - name: gen_program
   type: llm
   source:
@@ -40,21 +47,62 @@ nodes:
   inputs:
     model: gpt-3.5-turbo
     max_tokens: 3900
-    language: ${inputs.language}
     level: ${inputs.level}
     topic: ${inputs.topic}
     form: ${inputs.form}
-    numBugs: ${inputs.numBugs}
+    numBugs: ${inputs.numErrors}
+    complexity: ${inputs.complexity}
+    avoid: ${inputs.avoid}
   connection: prod_conn
   api: chat
   activate:
-    when: ${preprocess.output.auth}
-    is: true
-- name: validate_gen
+    when: ${preprocess.output.domain}
+    is: Programming
+- name: gen_history
+  type: llm
+  source:
+    type: code
+    path: gen_history.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+    form: ${inputs.form}
+    level: ${inputs.level}
+    topic: ${inputs.topic}
+    complexity: ${inputs.complexity}
+    numErrors: ${inputs.numErrors}
+    avoid: ${inputs.avoid}
+  connection: prod_conn
+  api: chat
+  activate:
+    when: ${preprocess.output.domain}
+    is: History
+- name: gen_chain
+  type: llm
+  source:
+    type: code
+    path: gen_chain.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+    level: ${inputs.level}
+    complexity: ${inputs.complexity}
+    numErrors: ${inputs.numErrors}
+    from: ${inputs.form}
+    topic: ${inputs.topic}
+    avoid: ${inputs.avoid}
+  connection: prod_conn
+  api: chat
+  activate:
+    when: ${preprocess.output.domain}
+    is: Chain
+- name: postprocess
   type: python
   source:
     type: code
     path: post_process.py
   inputs:
-    input1: ${gen_program.output}
-    auth: ${preprocess.output.auth}
+    domain: ${preprocess.output.domain}
+    prog: ${gen_program.output}
+    hist: ${gen_history.output}
+    chain: ${gen_chain.output}

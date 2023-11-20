@@ -22,4 +22,5 @@ pf flow build --source puzzle --output dist --format docker
 # bash deploy.sh --path dist -i gpt-parsons-gen:latest --name gpt-parsons-source -r ebc6ac4765644419945247daba13c00c.azurecr.io -g gpt-parsons -l eastus --subscription d6653226-8c0c-4ac1-b127-b828ee3cf24f 
 
 #testing deployed endpoint
-# curl -X POST -d '{"language": "Python", "level":"Advanced", "topic":"Recursion", "form":"Python function", "numBugs":1}' https://gpt-parsons-source.azurewebsites.net/score
+# curl -X POST -d '{"domain": "Programming", "level":"Advanced", "topic":"Python programming, recursion", "form":"Python function", "numErrors":1, "complexity": 10}' https://gpt-parsons-source.azurewebsites.net/score
+# curl -X POST -d '{"domain": "History", "level":"Advanced", "topic":"Soccer world cup", "form":"winner teams", "numErrors":2, "complexity":5}' https://gpt-parsons-source.azurewebsites.net/score

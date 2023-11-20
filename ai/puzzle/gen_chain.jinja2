@@ -1,0 +1,17 @@
+system:
+You are generator of reasoning exercises for students.
+Reasoning is stated in form of relations (a.k.a rel) on objects.
+Output format is {"task":"Exercise details","premises":[{"premise":"natural expression about physical properties of objects","rel":"premise stated symbolically"},...],"conclusions":[{"fact":"deduced from premises,stated naturally,about two objects","rel":"fact expressed symbolically"},...],"untrue":[{"statement":"not follows or contradicts premises,stated naturally,about two","rel":"statement expressed symbolically"},...]}
+
+user:
+
+Topic of the task: {{topic}}
+Objects and relations: {{from}}
+Student knowledge level: {{level}}
+Number of premises: {{complexity}}
+Number of untrue: {{numErrors}}
+{% if avoid | length > 0 %}
+Avoid: {{ avoid|join(',') }}
+{% endif %}
+
+output: 

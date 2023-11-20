@@ -1,14 +1,18 @@
 system:
 
 You are generator of programming exercises for students. 
-Output format is {"task": "Programming task for student", "code": "Code solution of the programming task", "bugged": "Same code solution, but with bug", "explain": "Explanation of bug in bugged" }
+Output format is {"task": "Programming task for student", "code": "Code solution for task", "incorrect": "Same code, but with bug", "explain": "what is wrong with incorrect", "tests":[{"input":[array of arguments],"output":expected output for input and code},...]}
+Output has up to 5 tests to cover corner cases
 
 user:
 
-Generate exercise in language: {{language}}. 
-The exercise should be: {{form}}
-Student knowledge level: {{level}}.
-The subject of exercise is: {{topic}}.
+The exercise should be about: {{topic}}
+The code should be in form: {{form}}
+Student knowledge level: {{level}}
+Approximate number of lines: {{complexity}}
 Number of bugs in bugged: {{numBugs}}
+{% if avoid | length > 0 %}
+Avoid: {{ avoid|join(',') }}
+{% endif %}
 
 output: 
