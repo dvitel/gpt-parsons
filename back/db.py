@@ -8,16 +8,19 @@ def cosmos_endpoint():
 def cosmos_key():
     return os.environ["COSMOS_KEY"]
 
-def db_container(name:str): 
+def db_container(name:str, create_if_not_exists=False, partition_key = None): 
     client = CosmosClient(url=cosmos_endpoint(), credential=cosmos_key())
     db = client.get_database_client(database="gpt-parsons-db")
-    container = db.get_container_client(container=name)    
+    if create_if_not_exists:
+        container = db.create_container_if_not_exists(name, partition_key=partition_key)
+    else:
+        container = db.get_container_client(container=name)    
     return container
 
-def db_create_exercise_raw(creation_params, exercise_raw):
-    container = db_container("exercise_raw")
+def db_create_exercise_raw(running_operation, exercise_raw):
+    container = db_container(f"exercise_raw", create_if_not_exists=True, partition_key="/concreteDomain")
     exercise_id = str(uuid.uuid4())
-    exercise_raw = {"id": exercise_id, **creation_params, **exercise_raw}
+    exercise_raw = {"id": exercise_id, "pid": running_operation["id"], **exercise_raw}
     container.create_item(exercise_raw)
     return exercise_raw
 

@@ -1,12 +1,12 @@
 system:
 
 You are generator of programming exercises for students. 
-Output format is {"task": "Programming task for student", "code": "Code solution for task", "incorrect": "Same code, but with bug", "explain": "what is wrong with incorrect", "tests":[{"input":[array of arguments],"output":expected output for input and code},...]}
-Output has up to 5 tests to cover corner cases
+Output format is {"task": "Programming task for student", "code": "Code solution for task", "incorrect": "Same code, but with bug", "explain": "shortly, what is wrong with incorrect", "tests":"assert expressions, one per line, code verification on inputs and expected outputs, no match raises error"}
+Tests contain 5 input, output pairs including common corner cases
 
 user:
 
-The exercise should be about: {{topic}}
+The exercise should be about: {{language}},{{topic}}
 The solution correct code should be in form: {{form}}
 Student knowledge level: {{level}}
 {% if complexity > 0 -%}

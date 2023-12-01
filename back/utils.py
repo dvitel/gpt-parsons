@@ -1,39 +1,25 @@
+import json
+import azure.functions as func
+from typing import Optional
 
+def process_entity(entity):
+    ''' Removes sensitive db info'''
+    if type(entity) is list or isinstance(entity, func.DocumentList):
+       return [process_entity(el) for el in entity]
+    if isinstance(entity, func.Document):
+        entity = entity.to_dict()
+    if isinstance(entity, dict):
+        return {k:v for k, v in entity.items() if not k.startswith("_")}
+    return entity
 
-def best_alignment(correct, bugged):
-    ''' Computes best alignment between two sequences (edit distance).
-        The result is dynamic programming matrix 
-    '''
-    D = [[(0, 'end') for j in range(len(bugged) + 1)] for i in range(len(correct) + 1)]
-    for i in range(1, len(correct) + 1):
-        D[i][0] = (D[i-1][0][0] + 1, 'group-correct')
-    for j in range(1, len(bugged) + 1):
-        D[0][j] = (D[0][j-1][0] + 1, 'group-bugged')
-    for i in range(1, len(correct) + 1):
-        for j in range(1, len(bugged) + 1):
-            if correct[i] == bugged[j]:
-                D[i][j] = (D[i-1][j-1][0], 'same')
-            else:
-                possibilities = [ (D[i][j - 1][0], 'group-bugged'), (D[i - 1][j][0], 'group-correct'), (D[i - 1][j - 1][0], 'group-both')]
-                w, act = min(possibilities, key = lambda x: x[0])
-                w0 = 2 if act == 'group-both' else 1 
-                D[i][j] = (w + w0, act)
-    d, _ = D[-1][-1]
-    correct_fragments = []
-    bugged_fragments = []
-    i = len(correct)
-    j = len(bugged)
-    while D[i][j][1] != 'end':
-        if D[i][j][1] == 'same':
-            correct_fragments.append(correct[i])
-            i = i - 1 
-            j = j - 1 
+def http_err(error: str, message: str, *, data: dict = {}, status: int = 400) -> func.HttpResponse:
+    ''' Builds json error response 400 or other '''
+    return func.HttpResponse(json.dumps({**data, 'error':error, 'message': message}), 
+                                status_code=status, mimetype="application/json")
 
-if __name__ == "__main__":
-    ''' Testing utils in online mode '''
-
-    code = "def sum_numbers(numbers):\n    total = 0\n    for number in numbers:\n        total += number\n    return total"
-    bugged = "def sum_numbers(numbers):\n    total = 1\n    for number in numbers:\n        total += number\n    return total"
-
-    best_alignment(code, bugged)
-    
+def http_ok(data: dict, *, created_url: Optional[str] = None) -> func.HttpResponse:
+    ''' Builds json response for 200 and 201 '''
+    resp = func.HttpResponse(json.dumps({**data, "ok": True}), status_code=200 if created_url is None else 201, mimetype="application/json")
+    if created_url is not None:
+        resp.headers['Location'] = created_url
+    return resp

@@ -4,16 +4,16 @@ environment:
 inputs:
   domain:
     type: string
-    default: Programming
+    default: python
   level:
     type: string
     default: Advanced
   topic:
     type: string
-    default: Python language, recursion
+    default: recursive functions
   form:
     type: string
-    default: function, should contain map
+    default: function
   numErrors:
     type: int
     default: 0
@@ -53,11 +53,12 @@ nodes:
     numBugs: ${inputs.numErrors}
     complexity: ${inputs.complexity}
     avoid: ${inputs.avoid}
+    language: ${inputs.domain}
   connection: prod_conn
   api: chat
   activate:
     when: ${preprocess.output.domain}
-    is: Programming
+    is: programming
 - name: gen_history
   type: llm
   source:
@@ -76,7 +77,7 @@ nodes:
   api: chat
   activate:
     when: ${preprocess.output.domain}
-    is: History
+    is: history
 - name: gen_chain
   type: llm
   source:
@@ -95,7 +96,7 @@ nodes:
   api: chat
   activate:
     when: ${preprocess.output.domain}
-    is: Chain
+    is: chain
 - name: postprocess
   type: python
   source:

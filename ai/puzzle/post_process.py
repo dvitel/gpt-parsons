@@ -5,7 +5,7 @@ import sys
 
 @tool
 def postprocess(domain: str = "", prog: str = "", hist: str = "", chain: str = "") -> str:
-    res = {"Programming": prog, "History": hist, "Chain": chain}
+    res = {"programming": prog, "history": hist, "chain": chain}
     if domain == "": 
         return {"error": "AuthError", "message": f"Flow key missmatch"}
     elif domain in res:
