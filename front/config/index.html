@@ -6,6 +6,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">    
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/vs.min.css">
         <style>
             .col-0 {
                 width: 0; 
@@ -36,96 +37,75 @@
                             <button class="nav-link active" id="home-tab" data-bs-toggle="tab" data-bs-target="#home-tab-pane" type="button" 
                                 role="tab" aria-controls="home-tab-pane" aria-selected="true"
                                 data-url="https://gpt-parsons.azurewebsites.net/api/exercise"
-                                data-renderer="renderer_exercises">Exercises</button>
+                                data-renderer="render_exercises">Exercises</button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile-tab-pane" type="button" role="tab" aria-controls="profile-tab-pane" aria-selected="false"
                                 data-url="https://gpt-parsons.azurewebsites.net/api/exercise-creation"
-                                data-renderer="renderer_ops">Operations</button>
+                                data-renderer="render_ops">Operations</button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false"
                                 data-url="https://gpt-parsons.azurewebsites.net/api/session"
-                                data-renderer="renderer_sessions">Sessions</button>
+                                data-renderer="render_sessions">Sessions</button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false" disable
                                 data-url="https://gpt-parsons.azurewebsites.net/api/stats"
-                                data-renderer="renderer_stats">Stats</button>
+                                data-renderer="render_stats">Stats</button>
                         </li>                        
                         <li class="nav-item ms-1" role="presentation">
                             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#create-modal" type="button">New</button>
+                            <button class="btn btn-outline-secondary" onclick="refreshDash()" type="button">Refresh</button>
                         </li>
                     </ul>
                     <div class="tab-content pt-1" id="myTabContent">
                         <div class="tab-pane fade show active" id="home-tab-pane" role="tabpanel" aria-labelledby="home-tab" tabindex="0">
-                            <table class="table">
+                            <table class="table align-middle">
                                 <thead>
                                     <tr>
+                                        <th scope="col">Status</th>
                                         <th scope="col">Domain</th>
                                         <th scope="col">Settings</th>
-                                        <th scope="col">Generated</th>
+                                        <th scope="col" style="width:40%">Generated</th>
                                         <th scope="col">Validation</th>
                                         <th scope="col">Stats</th>
                                         <th scope="col">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="exercise-table">
-                                    <template id="exercise-row"><tr class="lh-1 small">
-                                            <td scope="col" class="exercise-domain"></th>
-                                            <td scope="col" class="exercise-settings"></th>
-                                            <td scope="col" class="exercise-gen"></th>
-                                            <td scope="col" class="exercise-validation"></th>
-                                            <td scope="col" class="exercise-stats"></th>
-                                            <td scope="col">
-                                                <a href="#" class="exercise-details" data-bs-toggle="modal" data-bs-target="#details-modal">details</button>
-                                            </th>
-                                        </tr></template>
                                 </tbody>                                    
-                            </table>          
-                            <div class="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 100%">loading...</div>
-                            </div>
+                            </table>
                         </div>
                         <div class="tab-pane fade" id="profile-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
-                            <table class="table">
+                            <table class="table align-middle">
                                 <thead>
                                     <tr>
                                         <th scope="col">Time</th>
-                                        <th scope="col">Domain & Topic</th>
+                                        <th scope="col">Status</th>
+                                        <th scope="col">Domain</th>
                                         <th scope="col">Settings</th>
                                         <th scope="col">Log summary</th>
                                         <th scope="col">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody id="op-table">
-                                    <template id="op-row"><tr class="lh-1 small">
-                                            <td scope="col" class="op-time"></th>
-                                            <td scope="col" class="op-domain"></th>
-                                            <td scope="col" class="op-settings"></th>
-                                            <td scope="col" class="op-log"></th>
-                                            <td scope="col">
-                                                <a href="#" class="op-details" data-bs-toggle="modal" data-bs-target="#op-details-modal">details</button>
-                                            </th>
-                                        </tr></template>
                                 </tbody>                                    
                             </table>                            
-                            <div class="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-info" style="width: 100%">loading...</div>
-                            </div> 
                         </div>
                         <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
-                            <div class="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-                                <div class="progress-bar progress-bar-striped progress-bar-animated bg-warn" style="width: 100%">loading...</div>
-                            </div> 
                         </div>
                     </div>
 
                     <div class="toast-container bottom-0 end-0 p-3">
-                        <div id="message" class="toast align-items-center" data-bs-delay='10000' role="alert" aria-live="assertive" aria-atomic="true">
+                        <div id="message" class="toast align-items-center" role="alert" aria-live="assertive" aria-atomic="true">
                             <div class="d-flex">
-                              <div class="toast-body">
-                                Hello, world! This is a toast message.
+                              <div class="toast-body w-100">
+                                    <div class="toast-progress progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-info w-100">loading...</div>
+                                    </div>     
+                                    <div class="toast-text lh-sm">
+                                    </div>          
                               </div>
                               <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
                             </div>
@@ -190,29 +170,83 @@
                         <div class="input-group mb-2">
                             <label for="num" class="input-group-text"># generate</label>
                             <input name="num" id="num" type="number" min="1" max="10" class="form-control" value="1" />
-                        </div>     
-                        <textarea style="resize:none;" disabled id="log" class="form-control" rows="8" 
-                            data-url="https://gpt-parsons.azurewebsites.net/api/exercise-creation/">Logs...</textarea>
+                        </div>   
+                        <div class="small">
+                            <div id="creation-log" class="small font-monospace lh-sm" data-url="https://gpt-parsons.azurewebsites.net/api/exercise-creation/">
+                            </div>
+                        </div>  
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="create-exercises-form" class="btn btn-primary">Generate</button>
-                    <!-- <div class="text-danger d-none py-2" id="error" role="alert">
-                        Either error occured or other process is active. Check logs...
-                    </div>
-                    <div class="progress d-none" id="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated w-100">generation is in progress...</div>
-                    </div>
-                    <div class="alert alert-success d-none py-2" id="success" role="alert">
-                        Exercise generation started...
-                    </div> -->
+                    <button type="submit" form="create-exercises-form" class="btn btn-primary" disabled>Generate</button>
                 </div>
               </div>
             </div>
         </div>
 
-        <div class="modal" tabindex="-1" id="details-modal">
+
+        <div class="modal" tabindex="-1" id="op-modal">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title lh-1">Operation details</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body lh-sm">
+                    <div class="mb-1 d-flex justify-content-between py-2 px-1">
+                        <div class="me-2">ID</div>
+                        <div class="id"></div>
+                    </div>                       
+                    <div class="mb-1 d-flex justify-content-between text-bg-light py-2 px-1">
+                        <div class="me-2">Status</div>
+                        <div class="status text-uppercase"></div>
+                    </div>           
+                    <div class="mb-1 d-flex justify-content-between py-2 px-1">
+                        <div class="me-2">Timespan</div>
+                        <div class="text-right">
+                            <span class="time text-right"></span>
+                            <span class="duration text-right"></span>
+                        </div>
+                    </div>                             
+                    <div class="mb-1 d-flex justify-content-between text-bg-light py-2 px-1">
+                        <div class="me-2">Puzzle domain</div>
+                        <div class="domain text-uppercase"></div>
+                    </div>
+                    <div class="mb-1 d-flex justify-content-between py-2 px-1">
+                        <div class="me-2">Topic</div>
+                        <div class="topic"></div>
+                    </div>
+                    <div class="mb-1 d-flex justify-content-between text-bg-light py-2 px-1">
+                        <div class="me-2">Desired form</div>
+                        <div class="form"></div>
+                    </div>
+                    <div class="mb-1 d-flex justify-content-between py-2 px-1">
+                        <div class="me-2">Difficulty level</div>
+                        <div class="level text-uppercase"></div>
+                    </div>
+                    <div class="mb-1 d-flex justify-content-between text-bg-light py-2 px-1">
+                        <div class="me-2">Avoid</div>
+                        <div class="avoid"></div>
+                    </div>
+                    <div class="mb-1 d-flex justify-content-between">
+                        <div class="me-2"># lines <span class="complexity"></span></div>
+                        <div class="me-2"># errors <span class="numErrors"></span></div>
+                        <div># exercises <span class="num"></span></div>
+                    </div>    
+                    <div class="small">
+                        <div class="creation-log small text-break font-monospace lh-sm" data-url="https://gpt-parsons.azurewebsites.net/api/exercise-creation/">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+              </div>
+            </div>
+        </div>
+
+        <div class="modal" tabindex="-1" id="programming-modal">
             <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
@@ -220,32 +254,101 @@
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <form id="details-form" action="https://gpt-parsons.azurewebsites.net/api/exercise" method="post">
-                        <div class="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-                            <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" style="width: 100%">loading...</div>
-                        </div> 
+                    <form id="programming-modal-form" data-modal-id="programming-modal" 
+                        onsubmit="saveGenerated(event)" action="https://gpt-parsons.azurewebsites.net/api/exercise">
+                        <div class="mb-2">
+                            <label for="task">Task</label>
+                            <textarea name="task" class="form-control lh-sm" style="height:10ex"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label for="code">Solution</label>
+                            <textarea name="code" class="form-control lh-sm" style="height:10ex"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label for="tests">Tests</label>
+                            <textarea name="tests" class="form-control lh-sm" style="height:10ex"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label for="incorrect">Version with bug</label>
+                            <textarea name="incorrect" class="form-control lh-sm" style="height:10ex"></textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label for="explain">Bug feedback</label>
+                            <textarea name="explain" class="form-control lh-sm" style="height:10ex"></textarea>
+                        </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="details-form" class="btn btn-primary">Save</button>
-                    <!-- <div class="text-danger d-none py-2" id="error" role="alert">
-                        Either error occured or other process is active. Check logs...
+                    <button type="submit" form="programming-modal-form" class="btn btn-primary" data-bs-dismiss="modal">Save & Validate</button>
+                </div>
+              </div>
+            </div>
+        </div>
+
+        <div class="modal" tabindex="-1" id="fragments-modal">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Parsons puzzle details</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="fragments">
+                        
                     </div>
-                    <div class="progress d-none" id="progress" role="progressbar" aria-label="Animated striped example" aria-valuenow="75" aria-valuemin="0" aria-valuemax="100">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated w-100">generation is in progress...</div>
+                    <div class="trashed">
+
                     </div>
-                    <div class="alert alert-success d-none py-2" id="success" role="alert">
-                        Exercise generation started...
-                    </div> -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="programming-modal-form" class="btn btn-primary" data-bs-dismiss="modal">Save & Approve</button>
                 </div>
               </div>
             </div>
         </div>
 
 
+
+        <template id="exercise-row"><tr class="lh-sm small">
+            <td scope="col" class="exercise-status"></td>
+            <td scope="col" class="exercise-domain"></td>
+            <td scope="col" class="exercise-settings"></td>
+            <td scope="col" class="exercise-gen small"></td>
+            <td scope="col" class="exercise-validation"></td>
+            <td scope="col" class="exercise-stats"></td>
+            <td scope="col">
+                <select class="exercise-details form-select" autocomplete="off" data-update-url="https://gpt-parsons.azurewebsites.net/api/exercise">
+                    <option value="">Action</option>
+                    <option value="gen_ex">Generated...</option>
+                    <option value="validate_ex">Validation...</option>
+                    <option value="disable_ex">Hide</option>
+                    <option value="enable_ex">Show</option>
+                    <option value="delete_ex" class="text-danger">Delete</option>
+                </select>
+                <!-- <a href="#" class="exercise-details" data-bs-toggle="modal" data-bs-target="#details-modal">details</button> -->
+            </td>
+        </tr></template>      
+        
+        <template id="op-row"><tr class="lh-sm small">
+            <td scope="col" class="op-time"></td>
+            <td scope="col" class="op-status"></td>
+            <td scope="col" class="op-domain"></td>
+            <td scope="col" class="op-settings"></td>
+            <td scope="col" class="op-log"></td>
+            <td scope="col">
+                <select class="op-details form-select" autocomplete="off" data-update-url="https://gpt-parsons.azurewebsites.net/api/exercise-creation">
+                    <option value="">Action</option>
+                    <option value="details_op">Details</option>
+                    <option value="delete_op" class="text-danger">Delete</option>
+                </select>
+            </td>
+        </tr></template>        
           
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-        <script src="./config/script.js?v=10"></script>
+        <script src="./config/script.js?v=11"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>        
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     </body>
 </html>
