@@ -217,7 +217,7 @@ def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) ->
     logging.info(f"[update_programming_exercise] Update {doc}") 
     gen = req.get_json() #update generated
     doc["gen"] = gen
-    doc["update_ts"] = int(time)
+    doc["update_ts"] = int(time())
     # db_save_exercise(doc)
     validation = { "is_valid": True, "validated_ts": int(time()) } #starts validation here 
     if doc["settings"]["domain"] == "python": #validate python just here - could be bad 
@@ -245,6 +245,7 @@ def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) ->
         validation["validated_ts"] = int(time())
         validation["is_valid"] = "error" not in validation
     doc["validation"] = validation
+    doc["status"] = "validated" if validation["is_valid"] else "error"
     
     fragmentation = {}
     if validation["is_valid"]:        
