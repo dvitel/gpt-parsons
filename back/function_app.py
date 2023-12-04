@@ -20,7 +20,7 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 @validate_as_json(input_schema={
     "type": "object",
     "properties": {
-        "name": {"type":"string", "maxLength": 255},
+        "domain": {"type":"string", "enum": ["python","history","chain"]},
     },
     "minProperties": 1,
     "additionalProperties": False    
@@ -32,10 +32,27 @@ def start_session(req: func.HttpRequest, doc: func.Out[func.Document]) -> func.H
     logging.info(f'[session] started {session}')
     return session
 
+@app.route(route="session", methods=["PUT"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.cosmos_db_output(arg_name="doc", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", container_name="session")
+@validate_as_json(input_schema={
+    "type": "object",
+    "properties": {
+        "id": {"type": "string"},
+        "fragments": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 100},
+        "distractors": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 100},
+        "skip": {"type": "boolean"}
+    },
+    "minProperties": 3,
+    "additionalProperties": False    
+})
+def update_session(req: func.HttpRequest, doc: func.Out[func.Document]) -> func.HttpResponse:
+    ''' Submits or skips puzzle and get new one '''
+    pass
+
 
 @app.route(route="session/{id:guid}", methods=["GET"])
 @app.cosmos_db_input(arg_name="sessions", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", 
-                        container_name="test_sessions", id="{id}", partition_key="default")
+                        container_name="session", id="{id}", partition_key="default")
 @validate_as_json(outputs_404=True)
 def get_session(req: func.HttpRequest, sessions: func.DocumentList) -> func.HttpResponse:
     return sessions[0]
@@ -129,6 +146,13 @@ def ai_url():
 def ai_key():
     return os.environ["AI_KEY"]
 
+def fetch_top_level_names(code):
+    try:
+        mod = ast.parse(code)
+        return [el.name for el in mod.body if hasattr(el, "name")]
+    except: 
+        return []
+
 @app.cosmos_db_trigger(arg_name="procs", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", 
                         container_name="exercise_creation_active", lease_container_name="exercise_creation_active_lease", 
                         create_lease_container_if_not_exists=True)
@@ -140,12 +164,13 @@ def on_create_exercises(procs: func.DocumentList):
             logs = []
             running_operation["log"] = logs
             settings = running_operation["settings"]
+            glob_avoid = [*settings.get("avoid", [])]
             for i in range(settings["num"]):
                 i_res = {"i_start_ts": int(time())} 
                 logs.append(i_res)
                 db_upsert_exercise_creation_process(running_operation)
                 try:
-                    resp = requests.post(ai_url(), json={**settings, "key": ai_key()}, timeout=40)
+                    resp = requests.post(ai_url(), json={**settings, "avoid": glob_avoid, "key": ai_key()}, timeout=40)
                 except Exception as e:
                     logging.error(f"[on_create_exercises] Creation {i} error: cannot connect to AI service {e}")
                     i_res.update({"error":"Conn", "message": f"cannot connect to AI service"})
@@ -160,6 +185,9 @@ def on_create_exercises(procs: func.DocumentList):
                                 logging.error(f"[on_create_exercises] Creation {i} error: no 'gen' in the response: {generated}")
                                 i_res.update({"error":"Format", "message": f"AI service does not return gen field"})
                             else:
+                                if "code" in generated["gen"] and running_operation["domain"] == "python":
+                                    new_names = fetch_top_level_names(generated["gen"]["code"])
+                                    glob_avoid.extend(new_names)
                                 exercise_raw = db_create_exercise_raw(running_operation, generated["gen"])
                                 i_res.update({"ok":True,"exercise_id": exercise_raw["id"]})
                         except Exception as e: 
@@ -285,7 +313,8 @@ def delete_exercise(req: func.HttpRequest, ex: func.DocumentList) -> func.HttpRe
         "task": {"type":"string", "maxLength": 1024},
         "fragments": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 100},
         "distractors": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 100},
-        "shuffled": {"type":"boolean"}
+        "shuffled": {"type":"boolean"},
+        "enabled": {"type":"boolean"}
     },
     "minProperties": 5,
     "additionalProperties": False    
