@@ -213,35 +213,37 @@ def get_exercise(req: func.HttpRequest, exercises: func.DocumentList) -> func.Ht
     "additionalProperties": False
 }, outputs_404=True)
 def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) -> func.HttpResponse:
-    doc = process_entity(ex[0])
-    logging.info(f"[update_programming_exercise] Update {doc}") 
+    doc = process_entity(ex[0])    
     gen = req.get_json() #update generated
     doc["gen"] = gen
+    logging.info(f"[update_programming_exercise] Update {doc}") 
     doc["update_ts"] = int(time())
     # db_save_exercise(doc)
     validation = { "is_valid": True, "validated_ts": int(time()) } #starts validation here 
     if doc["settings"]["domain"] == "python": #validate python just here - could be bad 
         #1. compile code 
-        correct_code = None 
+        code = gen["code"]
+        tests = gen.get("tests", "").split(os.linesep) #one by one tests
+        # try:            
+        #     correct_code = compile(full_code, 'multiline', 'exec')  
+        #     validation["compile"] = True
+        # except Exception as e:            
+        #     validation["compile"] = False
+        #     validation["error"] = "SyntaxError"
+        #     validation["message"] = str(e)
+        #     correct_code = None
+        # #2. run generated tests
+        current_test = ""
         try:
-            code = gen["code"]
-            tests = gen["tests"]
-            wholeCorrect = code + "\n\n" + tests
-            correct_code = compile(wholeCorrect, 'multiline', 'exec')  
-            validation["compile"] = True
-        except Exception as e:            
-            validation["compile"] = False
-            validation["error"] = "SyntaxError"
+            for test in tests:
+                current_test = test
+                glob = {}
+                full_code = f"{code}{os.linesep}{test}"
+                exec(full_code, glob)
+        except Exception as e:
+            validation["error"] = type(e).__name__
+            validation["test"] = current_test
             validation["message"] = str(e)
-        #2. run generated tests
-        if correct_code is not None:
-            try:
-                exec(correct_code)
-                validation["tests"] = True
-            except Exception as e:
-                validation["tests"] = False
-                validation["error"] = "TestError"
-                validation["message"] = str(e)
         validation["validated_ts"] = int(time())
         validation["is_valid"] = "error" not in validation
     doc["validation"] = validation
@@ -249,12 +251,15 @@ def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) ->
     
     fragmentation = {}
     if validation["is_valid"]:        
+        logging.info(f"[fragmentation] starts")
         fragments = gen["code"].splitlines()
         fragments_set = set(fragments)
         bugged = gen["incorrect"].splitlines()
         bugged_fragments = [f for f in bugged if f not in fragments_set]
-        fragmentation["fragments":fragments, "distractors":bugged_fragments]
+        fragmentation["fragments"] = fragments
+        fragmentation["distractors"] = bugged_fragments
         doc["fragmentation"] = fragmentation
+    logging.info(f"[update_programming_exercise] Saving...") 
     db_save_exercise(doc)
     return doc
 
@@ -267,3 +272,37 @@ def delete_exercise(req: func.HttpRequest, ex: func.DocumentList) -> func.HttpRe
     logging.info(f"[delete_exercise] Deleting {doc}") 
     was_deleted = db_delete_exercise(doc)
     return {"id":doc["id"], "deleted": was_deleted}
+
+@app.route(route="puzzle/{id:guid}", methods=["POST"])
+@app.cosmos_db_input(arg_name="ex", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", 
+                        container_name="exercise", sql_query="SELECT * FROM exercise c WHERE c.id={id}")
+@app.cosmos_db_output(arg_name="puzzles", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", container_name="puzzle")
+@app.cosmos_db_output(arg_name="exs", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", container_name="exercise")
+@validate_as_json(input_schema={
+    "type": "object",
+    "properties": {
+        "domain": {"type":"string", "enum": ["python","history","chain"]},
+        "task": {"type":"string", "maxLength": 1024},
+        "fragments": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 100},
+        "distractors": {"type": "array", "items": {"type": "string", "maxLength": 1000}, "maxItems": 100},
+        "shuffled": {"type":"boolean"}
+    },
+    "minProperties": 5,
+    "additionalProperties": False    
+})
+def upsert_puzzle(req: func.HttpRequest, ex: func.DocumentList, puzzles: func.Out[func.Document], exs: func.Out[func.Document]) -> func.HttpResponse:
+    puzzle = {"id":req.route_params["id"],**req.get_json()}
+    ex0 = process_entity(ex[0])
+    ex0["status"] = "approved"
+    ex0["update_ts"] = int(time())
+    puzzles.set(func.Document.from_dict(puzzle))
+    exs.set(func.Document.from_dict(ex0))
+    logging.info(f'[puzzle] {puzzle}')
+    return puzzle
+
+@app.route(route="puzzle/{id:guid}", methods=["GET"])
+@app.cosmos_db_input(arg_name="ex", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", 
+                        container_name="puzzle", sql_query="SELECT * FROM puzzle c WHERE c.id={id}")
+@validate_as_json(outputs_404=True)
+def get_puzzle(req: func.HttpRequest, ex: func.DocumentList) -> func.HttpResponse:
+    return ex[0]

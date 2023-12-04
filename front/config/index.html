@@ -17,6 +17,20 @@
             .col-tran {
                 transition: all 250ms ease;
             }
+            code[contenteditable]:focus {
+                outline: 0px solid transparent;                
+            }      
+            pre[contenteditable] {
+                white-space: normal;
+            }
+            .fragment {
+                -webkit-user-select: none; 
+                -ms-user-select: none; 
+                user-select: none;
+            }
+            .fragment:focus {
+                border: 1px solid rgb(214, 139, 0) !important;
+            }
         </style>
     </head>
     <body>
@@ -66,7 +80,7 @@
                                     <tr>
                                         <th scope="col">Status</th>
                                         <th scope="col">Domain</th>
-                                        <th scope="col">Settings</th>
+                                        <!-- <th scope="col">Settings</th> -->
                                         <th scope="col" style="width:40%">Generated</th>
                                         <th scope="col">Validation</th>
                                         <th scope="col">Stats</th>
@@ -250,37 +264,37 @@
             <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title">Exercise details</h5>
+                  <h5 class="modal-title">Edit exercise</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" style="max-height: 80vh;overflow-y: auto;">
                     <form id="programming-modal-form" data-modal-id="programming-modal" 
                         onsubmit="saveGenerated(event)" action="https://gpt-parsons.azurewebsites.net/api/exercise">
                         <div class="mb-2">
                             <label for="task">Task</label>
-                            <textarea name="task" class="form-control lh-sm" style="height:10ex"></textarea>
+                            <pre contenteditable="true" class="gen-ex-field ex-task mb-0 lh-sm"></pre>
                         </div>
                         <div class="mb-2">
                             <label for="code">Solution</label>
-                            <textarea name="code" class="form-control lh-sm" style="height:10ex"></textarea>
+                            <pre class="border border-primary mb-0 lh-1 gen-code"><code contenteditable="true" class="gen-ex-field ex-code"></code></pre>
                         </div>
                         <div class="mb-2">
                             <label for="tests">Tests</label>
-                            <textarea name="tests" class="form-control lh-sm" style="height:10ex"></textarea>
+                            <pre class="border border-secondary mb-0 lh-1 gen-code"><code contenteditable="true" class="gen-ex-field ex-tests"></code></pre>
                         </div>
                         <div class="mb-2">
                             <label for="incorrect">Version with bug</label>
-                            <textarea name="incorrect" class="form-control lh-sm" style="height:10ex"></textarea>
+                            <pre class="border border-danger mb-0 lh-1 gen-code"><code contenteditable="true" class="gen-ex-field ex-incorrect"></code></pre>
                         </div>
                         <div class="mb-2">
                             <label for="explain">Bug feedback</label>
-                            <textarea name="explain" class="form-control lh-sm" style="height:10ex"></textarea>
+                            <pre contenteditable="true" class="gen-ex-field ex-explain mb-0 lh-sm"></pre>
                         </div>
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="programming-modal-form" class="btn btn-primary" data-bs-dismiss="modal">Save & Validate</button>
+                    <button type="submit" form="programming-modal-form" class="btn btn-primary">Save & Validate</button>
                 </div>
               </div>
             </div>
@@ -290,20 +304,28 @@
             <div class="modal-dialog">
               <div class="modal-content">
                 <div class="modal-header">
-                  <h5 class="modal-title">Parsons puzzle details</h5>
+                  <h5 class="modal-title">Edit Parsons puzzle</h5>
                   <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="fragments">
-                        
+                    <div class="mb-2">
+                        <div class="puzzle-task"></div>
+                    </div>                    
+                    <div class="mb-2">
+                        <div class="fragments" ondrop="dropFragment(event)" ondragover="dragoverFragment(event)"></div>
                     </div>
-                    <div class="trashed">
-
+                    <div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input puzzle-shuffle" type="checkbox" id="shuffleForEverySession">
+                            <label class="form-check-label" for="shuffleForEverySession">Shuffle for every session</label>
+                        </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="programming-modal-form" class="btn btn-primary" data-bs-dismiss="modal">Save & Approve</button>
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" onclick="shuffleFragments()" class="btn btn-secondary">Shuffle</button>
+                    <button type="button" onclick="approvePuzzle(event)" class="btn btn-primary save-puzzle"
+                        data-url="https://gpt-parsons.azurewebsites.net/api/puzzle">Save & Approve</button>
                 </div>
               </div>
             </div>
@@ -314,15 +336,15 @@
         <template id="exercise-row"><tr class="lh-sm small">
             <td scope="col" class="exercise-status"></td>
             <td scope="col" class="exercise-domain"></td>
-            <td scope="col" class="exercise-settings"></td>
+            <!-- <td scope="col" class="exercise-settings"></td> -->
             <td scope="col" class="exercise-gen small"></td>
             <td scope="col" class="exercise-validation"></td>
             <td scope="col" class="exercise-stats"></td>
             <td scope="col">
                 <select class="exercise-details form-select" autocomplete="off" data-update-url="https://gpt-parsons.azurewebsites.net/api/exercise">
                     <option value="">Action</option>
-                    <option value="gen_ex">Generated...</option>
-                    <option value="validate_ex">Validation...</option>
+                    <option value="gen_ex">Edit exercise</option>
+                    <option value="validate_ex">Edit puzzle</option>
                     <option value="disable_ex">Hide</option>
                     <option value="enable_ex">Show</option>
                     <option value="delete_ex" class="text-danger">Delete</option>
@@ -347,7 +369,7 @@
         </tr></template>        
           
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
-        <script src="./config/script.js?v=11"></script>
+        <script src="./config/script.js?v=12"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>        
         <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/python.min.js"></script>
     </body>

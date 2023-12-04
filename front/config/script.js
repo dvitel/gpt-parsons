@@ -33,6 +33,12 @@ const after = async (ms, f) => {
     f();
 }
 
+const clearEl = (el) => {
+    while (el.lastChild) {
+        el.removeChild(el.lastChild)
+    }
+}
+
 let toastPrevStyling = {}
 
 let hideInform = false;
@@ -70,6 +76,17 @@ const inform = (txt, withProgress = false, cls = []) => {
     if (!messageToastBootstrap.isShown()) messageToastBootstrap.show() 
 }
 
+const newCodeTag = (codeText, codeLang, highlighted = true) => {
+    let pre = document.createElement("pre");
+    pre.classList.add("mb-0", "lh-1");    
+    let code = document.createElement("code");
+    pre.appendChild(code);
+    code.classList.add("language-" + codeLang, "p-0");
+    code.innerHTML = codeText;
+    if (highlighted) hljs.highlightElement(code);
+    return pre
+}
+
 //UI init section
 function onKeyChange(e) {
     if (e) e.preventDefault();
@@ -97,7 +114,7 @@ const decFetchOps = () => {
     }
 }
 
-const fetchAPI = async (url, method="GET", data=null, progressMsg="loading...") => {
+const fetchAPI = async (url, method="GET", data=null, progressMsg="loading...", hide404 = false) => {
     let statusText = "";
     try {
         let authKey = getAuthKey();
@@ -105,7 +122,7 @@ const fetchAPI = async (url, method="GET", data=null, progressMsg="loading...") 
         fetchOpsCount++;
         inform(progressMsg, true);
         const body = !!data ? JSON.stringify(data) : null;
-        console.log(`${method} ${url} ${data}...`)
+        console.log(`${method} ${url}`, data)
         const resp = await fetch(url, {
             method,
             headers: {
@@ -115,6 +132,10 @@ const fetchAPI = async (url, method="GET", data=null, progressMsg="loading...") 
             },
             body
         })
+        if (resp.status == 404 && hide404) {
+            decFetchOps();
+            return {};
+        }
         statusText = `Status ${resp.status} ${resp.statusText}`;
         const respData = await resp.json() || {};       
         console.log(`Response ${method} ${url} ${resp.status}`, respData);
@@ -143,16 +164,14 @@ const selectTab = async tab => {
     resultRenderer(resultData);
 }
 
-function refreshDash() {
-    selectTab(activeTab);
+async function refreshDash() {
+    await selectTab(activeTab);
 }
 
 //UI dash renderers 
 
 function defaultRenderer (table, dataList, template, renderOne) {
-    while (table.lastChild) { //clear dash table
-        table.removeChild(table.lastChild)
-    }        
+    clearEl(table);
     if (!dataList || dataList.length == 0) {
         const row = template.content.lastChild.cloneNode(true)
         let td = document.createElement("td");
@@ -196,58 +215,195 @@ const props_to_div = (target, data, withHeader = true, cls = [], codeLang = "") 
                 headerDiv.innerHTML = p;
                 div.appendChild(headerDiv);
             }
-            let pre = document.createElement("pre");
-            pre.classList.add("mb-0");
-            div.appendChild(pre);
-            let code = document.createElement("code");
-            pre.appendChild(code);
-            code.classList.add("language-" + codeLang);
-            code.innerHTML = data[p];
-            hljs.highlightElement(code);
+            let codeEl = newCodeTag(data[p], codeLang, true)
+            div.appendChild(codeEl);
         }
         target.appendChild(div)
     })
 }
 
+const showModal = (id) => bootstrap.Modal.getOrCreateInstance("#" + id).show();
+
+const hideModal = (id) => bootstrap.Modal.getOrCreateInstance("#" + id).hide();
+
+let currentFragments = {}
+
+function dropFragment(event) {
+    event.preventDefault();
+    // Get the id of the target and add the moved element to the target's DOM
+    const fragmentIdStr = event.dataTransfer.getData("text/plain");
+    const fragment = currentFragments[fragmentIdStr];
+    fragment.el.focus({preventScroll:true})
+    // event.target.appendChild(fragment.el);
+    // console.log(fragment.el.innerText)
+}
+
+const elIndex = (el) => [...el.parentElement.children].indexOf(el)
+
+const findFragEl = (el, i = 0) => {
+    if (i == 10) return null;
+    if (el.classList.contains("fragment")) return el;
+    return findFragEl(el.parentElement, i+1);
+}
+
+// const elBin = (el) => ["fragments", "trashed"].find(bin => el.parentElement.classList.contains(bin)) || "";
+
+function dragoverFragment(event) {
+    event.preventDefault();
+    const fragmentIdStr = event.dataTransfer.getData("text/plain");
+    const fragment = currentFragments[fragmentIdStr];
+    const bellowEl = findFragEl(event.target);
+    if (bellowEl != null && fragment.el != bellowEl) {
+        // console.log(fragment.el.innerText, "||", bellowEl.innerText)
+        // const curBin = elBin(fragment.el)
+        // const otherBin = elBin(bellowEl)
+        // if (!curBin || !otherBin) return;
+        // if (curBin == otherBin) { //same bin 
+        let curIndex = elIndex(fragment.el);
+        let otherIndex = elIndex(bellowEl);
+        if (curIndex < otherIndex) bellowEl.after(fragment.el);
+        else if (curIndex > otherIndex) bellowEl.before(fragment.el);
+        // fragment.el.focus({preventScroll:true})
+        // } else if (curBin == "fragments") {   
+        //     bellowEl.before(fragment.el);
+        // } else if (curBin == "trashed") {
+        //     bellowEl.after(fragment.el);
+        // }
+    }    
+    // event.dataTransfer.dropEffect = "move"
+}
+
+let emptyImg = document.createElement('img')
+emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+//https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
+//https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+function shuffle(array) {
+    let currentIndex = array.length;
+    // While there remain elements to shuffle.
+    while (currentIndex > 0) {
+      // Pick a remaining element.
+      let randomIndex = Math.floor(Math.random() * currentIndex);
+      currentIndex--;
+      // And swap it with the current element.
+      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
+    }
+    return array;
+}
+
+function shuffleFragments() {
+    const fragModalEl = document.getElementById("fragments-modal")
+    const bin = fragModalEl.querySelector(".fragments")
+    fragments = shuffle([...bin.querySelectorAll(".fragment")])
+    fragments.forEach(frEl => bin.appendChild(frEl));
+}
+
+async function approvePuzzle(event) {
+    const { url, id, domain } = event.target.dataset;
+    const fragModalEl = document.getElementById("fragments-modal")
+    const task = fragModalEl.querySelector(".puzzle-task").innerText
+    const fragments = []
+    const distractors = [];
+    let curList = fragments;
+    [...fragModalEl.querySelectorAll(".fragment")].forEach(frEl => {
+        if (frEl.classList.contains("delim")) curList = distractors;
+        else {
+            curList.push(frEl.innerText);
+        }        
+    })
+    let shuffled = fragModalEl.querySelector(".puzzle-shuffle").checked;
+    const { id:createdId } = await fetchAPI(url + "/" + id, "POST", { domain, task, fragments, distractors, shuffled }) || {}
+    if (createdId) {
+        hideModal("fragments-modal")
+        await refreshDash();
+    }
+}
+
+async function initParsonsModal({ id, task:defaultTask = "Sort fragments in correct order. Trash wrong fragments.", 
+                    fragments:defaultFragments = [], distractors:defaultDistractors = [], domain = "" }) {    
+    let parsonsModalEl = document.getElementById("fragments-modal")     
+    const saveBtlEl = parsonsModalEl.querySelector(".save-puzzle")
+    saveBtlEl.dataset.id = id
+    saveBtlEl.dataset.domain = domain
+    //first fetch existign puzzle if any     
+    let { task = defaultTask, fragments = defaultFragments, distractors = defaultDistractors, shuffled = false } = 
+        await fetchAPI(saveBtlEl.dataset.url + "/" + id, "GET", null, "loading puzzle...", true) || {}
+    parsonsModalEl.querySelector(".puzzle-task").innerHTML = task 
+    parsonsModalEl.querySelector(".puzzle-shuffle").checked = shuffled
+    currentFragments = {}           
+    let fragmentId = 0
+    const bins = {".fragments":[
+        ...fragments.map(f => ({f})),
+        ...((distractors.length > 0) ? [{f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true}] : []),
+        ...distractors.map(f => ({f, cls:["bg-light"]}))
+    ]}
+    Object.keys(bins).forEach(bin => {
+        const binEl = parsonsModalEl.querySelector(bin);
+        clearEl(binEl) 
+        bins[bin].forEach(({f, cls = [], noCode = false}, i) => {
+            let codeEl = null; 
+            if (noCode) {
+                codeEl = document.createElement("pre")
+                codeEl.innerHTML = f;
+            } else {
+                codeEl = newCodeTag(f, domain, true);
+            }                
+            codeEl.classList.add("border", "fragment", "px-2", "py-2", ...cls)
+
+            codeEl.draggable = true
+            codeEl.tabIndex = 0;
+            codeEl.lastChild.tabIndex = -1;
+            let fragmentIdStr = `${fragmentId}`
+            currentFragments[fragmentIdStr] = {pos:i, bin:".fragments", el:codeEl}
+            codeEl.addEventListener("click", (ev) => {
+                codeEl.focus({preventScroll:true, focusVisible:true})
+            })
+            codeEl.addEventListener("keyup", (ev) => {
+                if ((ev.code == "ArrowUp") && codeEl.previousElementSibling) {
+                    codeEl.previousElementSibling.before(codeEl)
+                } else if ((ev.code == "ArrowDown") && codeEl.nextElementSibling) {
+                    codeEl.nextElementSibling.after(codeEl)
+                }
+                codeEl.focus({preventScroll:true})
+            })
+            codeEl.addEventListener("dragstart", (ev) => {
+                // ev.target.classList.add("border-primary")
+                codeEl.focus({preventScroll:true})
+                ev.dataTransfer.setData("text/plain", fragmentIdStr)
+                ev.dataTransfer.effectAllowed = "move";
+                ev.dataTransfer.setDragImage(emptyImg, 0, 0)
+            })
+            codeEl.addEventListener("dragend", (ev) => {
+                // ev.target.classList.remove("border-primary")
+            })
+
+            binEl.appendChild(codeEl)
+            fragmentId++;
+        })    
+    })
+}
+
 async function saveGenerated(event) {
     event.preventDefault(); //do not actually submit
-    const data = new FormData(event.currentTarget);
-    const plainFormData = Object.fromEntries(data.entries());
-    const { validation: {validated_ts, is_valid} = {}, fragmentation: {fragments = [], distractors = []} = {}, settings: { domain } = {} } = 
-        await fetchAPI(event.currentTarget.action + "/" + event.currentTarget.dataset.id + "/" + event.currentTarget.dataset.category, 
-            "PUT", plainFormData, "validating...") || {}
-    if (!validated_ts) return;
-    inform(is_valid ? "Generated data is valid" : "Invalid content from ChatGPT", false, [is_valid ? "text-success" : "text-danger", "fw-bold"])
-    refreshDash();
+    const data = {};
+    [...event.currentTarget.querySelectorAll(".gen-ex-field")].forEach(el => {
+        const fieldName = [...el.classList].find(cl => cl.startsWith("ex-")).substring(3)
+        data[fieldName] = el.innerText;
+    });
+    const { id, category, modalId } = event.currentTarget.dataset
+    // console.log(data);
+    const { validation: {validated_ts, is_valid, error, test} = {}, fragmentation: {fragments = [], distractors = []} = {}, settings: { domain } = {}, gen = {} } = 
+        await fetchAPI(event.currentTarget.action + "/" + id + "/" + category, 
+            "PUT", data, "validating...") || {}
+    if (!validated_ts) return;    
+    await refreshDash();
+    inform(is_valid ? "Exercise is valid" : `${error} ${test}`, false, [is_valid ? "text-success" : "text-danger", "fw-bold"])
     //open modal for fragments shuffling - later other functionality
-    if (is_valid) {
-        let parsonsModal = bootstrap.Modal.getOrCreateInstance("#fragments-modal")
-        let parsonsModalEl = document.getElementById("fragments-modal")
-        const frEl = parsonsModalEl.querySelector("fragments");
-        fragments.forEach(f => {
-            const preEl = document.createElement("pre")
-            const codeEl = document.createElement("code")
-            preEl.classList.add("mb-0")
-            preEl.classList.add("border-1")
-            preEl.appendChild(codeEl)
-            codeEl.innerHTML = f; 
-            codeEl.classList.add("language-" + codeLang);
-            hljs.highlightElement(codeEl)
-            frEl.appendChild(preEl)
-        })
-        const trEl = parsonsModalEl.querySelector("trashed");
-        distractors.forEach(f => {
-            const preEl = document.createElement("pre")
-            const codeEl = document.createElement("code")
-            preEl.classList.add("mb-0")
-            preEl.classList.add("border-1")
-            preEl.appendChild(codeEl)
-            codeEl.innerHTML = f; 
-            codeEl.classList.add("language-" + codeLang);
-            hljs.highlightElement(codeEl)
-            trEl.appendChild(preEl)
-        })
-        parsonsModal.show();
+    if (is_valid) {        
+        await initParsonsModal({ id, task: gen.task, fragments, distractors, domain });
+        hideModal(modalId);
+        await sleep(200);
+        showModal("fragments-modal")
     }
 }
 
@@ -256,14 +412,14 @@ function render_exercises(dataList) {
     const exerciseRowEl = document.getElementById("exercise-row")
     defaultRenderer(exerciseTableEl, dataList, exerciseRowEl, (row, { id, creation_ts, update_ts,
             status, settings: { domain, topic, form, level, numErrors, complexity, avoid } = {},
-            gen = {}, validation = {}, stats = {}
+            gen = {}, validation = {}, stats = {}, fragmentation: { fragments = [], distractors = [] } = {}
         }) => {
         let statusToCls = { "approved": "text-success", "raw": "text-secondary-emphasis", "error": "text-danger-emphasis", "validated": "text-info", "disabled":"text-secondary"}
         props_to_div(row.querySelector(".exercise-status"), {status}, false, ["text-uppercase", "fw-bold", statusToCls[status] || "" ])        
         props_to_div(row.querySelector(".exercise-status"), {"updated":dtToStr(update_ts), "created":dtToStr(creation_ts)});
         props_to_div(row.querySelector(".exercise-domain"), {domain}, false)
         props_to_div(row.querySelector(".exercise-domain"), {topic}, false, ["small"])
-        props_to_div(row.querySelector(".exercise-settings"), { form, level, numErrors, complexity, avoid: avoid.length == 0 ? null : avoid}, true, ["small"]);
+        // props_to_div(row.querySelector(".exercise-settings"), { form, level, numErrors, complexity, avoid: avoid.length == 0 ? null : avoid}, true, ["small"]);
         let category = getCategory(domain)
         switch (category) {
             case "programming": {
@@ -274,7 +430,19 @@ function render_exercises(dataList) {
                 row.querySelector(".exercise-gen").appendChild(genEl);
                 props_to_div(genEl, { task }, false, ["mb-1"])
                 props_to_div(genEl, { code }, false, [], domain)
-                // props_to_div(row.querySelector(".exercise-gen"), { tests }, true, [], domain)
+                
+                const { validated_ts, error, message, test } = validation
+                const valEl = row.querySelector(".exercise-validation")
+
+                if (validated_ts) {
+                    props_to_div(valEl, { "":error || "Valid" }, false, [!error ? "text-success" : "text-danger"])
+                    if (message) props_to_div(valEl, { message }, false, ["small"])
+                    if (test) props_to_div(valEl, { test }, false, ["small"], domain)
+                    // props_to_div(valEl, { "":dtToStr(validated_ts) }, false, ["small"])
+                } else {
+                    props_to_div(valEl, {});
+                }
+
                 break;
             }
             case "history": {
@@ -288,7 +456,6 @@ function render_exercises(dataList) {
                 break;
             }
         }        
-        props_to_div(row.querySelector(".exercise-validation"), validation)
         props_to_div(row.querySelector(".exercise-stats"), stats)
         const detailsEl = row.querySelector(".exercise-details")
         const removeActions = (...acts) => {
@@ -301,19 +468,27 @@ function render_exercises(dataList) {
             e.preventDefault();
             switch (detailsEl.value) {
                 case "gen_ex": {
-                    const modalId = `${category}-modal`;
-                    const modal = bootstrap.Modal.getOrCreateInstance("#" + modalId);
+                    const modalId = `${category}-modal`;                    
                     const modalEl = document.getElementById(modalId);
                     detailsObj = gen
                     Object.keys(detailsObj).forEach(k => {
-                        let el = modalEl.querySelector(`[name=${k}]`);
-                        if (el) {el.value = detailsObj[k]}
+                        let el = modalEl.querySelector(`.ex-${k}`);
+                        if (el) {el.innerHTML = detailsObj[k]}
                         else { console.log("missing element for property ", k)}
                     });
-                    const form = modalEl.querySelector("form")
+                    const form = modalEl.querySelector("form");
+                    [...form.querySelectorAll(".gen-code")].forEach(el => {
+                        el.lastChild.classList.add(`language-${domain}`)
+                        hljs.highlightElement(el.lastChild);
+                    });            
                     form.dataset.id = id;
                     form.dataset.category = category;
-                    modal.show();
+                    showModal(modalId);
+                    break;
+                }
+                case "validate_ex": {
+                    await initParsonsModal({ id, task: gen.task, fragments, distractors, domain })
+                    showModal("fragments-modal")
                     break;
                 }
                 case "delete_ex": {
@@ -377,7 +552,6 @@ function render_ops (dataList) {
             e.preventDefault();
             switch (detailsEl.value) {
                 case "details_op": {
-                    const modal = bootstrap.Modal.getOrCreateInstance("#op-modal");
                     let modalEl = document.getElementById("op-modal");
                     detailsObj = {id, status, time: datetime, duration, domain, topic, form, level, numErrors, complexity, 
                                     avoid: avoid.length == 0 ? "--none--" : avoid.join(", "), num}
@@ -386,7 +560,7 @@ function render_ops (dataList) {
                         if (el) {el.innerHTML = detailsObj[k]}
                         else { console.log("missing element for property ", k)}
                     });
-                    modal.show();
+                    showModal("op-modal")
                     renderLogs(modalEl.querySelector(".creation-log"), id); //do not await
                     document.getElementById("op-modal").addEventListener("hide.bs.modal", () => { cancelLogsOp() });
                     break;
@@ -468,9 +642,7 @@ async function renderLogs(targetEl, opId, logsMessage = "loading logs...") {
         targetEl.appendChild(el);
     }
     const clearLogs = () => {
-        while (targetEl.lastChild) {
-            targetEl.removeChild(targetEl.lastChild);
-        }
+        clearEl(targetEl)
         addLog("Fetching operation logs...")
     }    
     await fetchLogsLoop(targetEl.dataset.url, opId, addLog, clearLogs, logsMessage);
