@@ -38,5 +38,7 @@ Validated and approved exercises example:
 3. CosmosDB NoSQL
 4. AI: Azure ML Prompt Flow, deployed as App Service. 
 
+Generation of one exercise with OpenAI API requires from 10 to 40 seconds. Therefore, it happens asynchronously and is initiated by instructor. Another reason for this decision is the cost of calling ChatGPT endpoint. 
+
 ![flow](ex3.png)
 
