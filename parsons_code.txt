@@ -1,0 +1,87 @@
+```
+# Title: Loopin' Lists
+# Topics: loops, lists
+
+# Step 1: Declare and initialize a list variable called "numbers"
+numbers = [1, 2, 3, 4, 5]
+
+# Step 2: Declare a loop variable called "index" and set it to 0
+index = 0
+
+# Step 3: Start a loop that runs while the value of "index" is less than the length of the list "numbers"
+while index < len(numbers):
+    # Step 5: Declare a variable called "currentNumber" and set it to the value at the index position of "numbers"
+    currentNumber = numbers[index]
+    
+    # Step 6: Print the value of "currentNumber"
+    print(currentNumber)
+    
+    # Step 7: Increment the value of "index" by 1
+    index += 1
+
+# Step 9: Declare a loop variable called "item" and set it to the value at the first index of "numbers"
+item = numbers[0]
+
+# Step 10: Start a loop that runs while "item" is not equal to 5
+while item != 5:
+    # Step 11: Print "Looping!"
+    print("Looping!")
+    
+    # Step 12: Add 2 to the value of "item"
+    item += 2
+```
+
+```python
+# Step 1: Define an array called "numbers" to store a list of integers.
+numbers = []
+
+# Step 2: Initialize an empty array called "evenNumbers" to store even integers.
+evenNumbers = []
+
+# Step 3: Initialize an empty array called "oddNumbers" to store odd integers.
+oddNumbers = []
+
+# Step 4: Use a loop to iterate through each number in the "numbers" array.
+for number in numbers:
+    
+    # Step 5: Within the loop, check if the number is divisible by 2 using the modulo operator.
+    if number % 2 == 0:
+        # Step 6: If the number is divisible by 2 (even), add it to the "evenNumbers" array.
+        evenNumbers.append(number)
+    else:
+        # Step 7: If the number is not divisible by 2 (odd), add it to the "oddNumbers" array.
+        oddNumbers.append(number)
+
+# Step 8: After the loop ends, print the "evenNumbers" array.
+print(evenNumbers)
+
+# Step 9: After the loop ends, print the "oddNumbers" array.
+print(oddNumbers)
+```
+
+This code represents the pseudocode provided and aligns with the title and topics. Each step mentioned in the pseudocode is clearly indicated in the code block with a corresponding comment. The code has been organized to reflect the logical flow of the task, making it suitable for a Parsons puzzle.
+```python
+# 1. Initialization:
+numbers = [5, 10, 15, 20, 25] # DECLARE Array numbers[]
+sum = 0 # DECLARE INTEGER sum = 0
+count = 0 # DECLARE INTEGER count = 0
+
+# 2. Array Traversal Loop:
+for number in numbers: # FOR EACH number IN numbers
+
+    # 3. Sum Calculation:
+    sum += number # ADD number TO sum
+    count += 1 # INCREMENT count
+
+    # 4. End Loop
+    # Implied by the ending of the Python for loop
+
+# 5. Average Calculation:
+avg = sum / count # SET avg = sum DIVIDE BY count
+
+# 6. Print Statements:
+print("The sum of the array is: ") # PRINT "The sum of the array is:"
+print(sum) # PRINT sum
+print("The average of the array is:") # PRINT "The average of the array is:"
+print(avg) # PRINT avg
+```

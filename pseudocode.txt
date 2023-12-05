@@ -1,0 +1,75 @@
+1. Declare a variable `score` and set it to 75.
+
+2. Check if `score` is greater than or equal to 80:
+   - If true, print "Great job! You passed!"
+   - If false, go to step 3.
+
+3. Check if `score` is greater than or equal to 60:
+   - If true, print "Nice! You passed!"
+   - If false, go to step 4.
+
+4. Print "You did not pass this time. Keep working hard!"
+
+Note: The order of the code blocks can be rearranged.
+1. Declare a list variable called "numbers"
+2. Initialize the list variable with the numbers 1, 2, 3, 4, 5
+3. Declare a loop variable called "index" and set it to 0
+4. Declare a loop that runs while the value of "index" is less than the length of the list "numbers"
+5.   Declare a variable called "currentNumber" and set it to the value at the index position of "numbers"
+6.   Print the value of "currentNumber"
+7.   Increment the value of "index" by 1
+8. End the loop
+9. Declare a loop variable called "item" and set it to the value at the first index of "numbers"
+10. Declare a loop that runs while "item" is not equal to 5
+11.   Print "Looping!"
+12.   Add 2 to the value of "item"
+13. End the loop
+1. Define an array called "numbers" to store a list of integers.
+2. Initialize an empty array called "evenNumbers" to store even integers.
+3. Initialize an empty array called "oddNumbers" to store odd integers.
+4. Use a loop to iterate through each number in the "numbers" array.
+5. Within the loop, check if the number is divisible by 2 using the modulo operator.
+6. If the number is divisible by 2 (even), add it to the "evenNumbers" array.
+7. If the number is not divisible by 2 (odd), add it to the "oddNumbers" array.
+8. After the loop ends, print the "evenNumbers" array.
+9. After the loop ends, print the "oddNumbers" array.
+Pseudocode:
+
+1. Initialization:
+```
+DECLARE Array numbers[] = {5, 10, 15, 20, 25}
+DECLARE INTEGER sum = 0
+DECLARE INTEGER count = 0
+DECLARE INTEGER avg
+```
+
+2. Array Traversal Loop:
+```
+FOR EACH number IN numbers
+```
+
+3. Sum Calculation:
+```
+ADD number TO sum 
+INCREMENT count
+```
+
+4. End Loop:
+```
+ENDFOR
+```
+
+5. Average Calculation:
+```
+SET avg = sum DIVIDE BY count 
+```
+
+6. Print Statements:
+```
+PRINT "The sum of the array is:" 
+PRINT sum 
+PRINT "The average of the array is:"
+PRINT avg
+```
+
+Each pseudocode block represents a unique part of the logic which would help students to learn the functionalities of loops, arrays, and other programming concepts.
