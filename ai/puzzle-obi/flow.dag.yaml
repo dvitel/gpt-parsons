@@ -1,0 +1,29 @@
+inputs:
+  function:
+    type: string
+    default: "def reverse_list_in_place(lst):     left = 0     right = len(lst) -
+      1      while left < right:         lst[left], lst[right] = lst[right],
+      lst[left]         left += 1         right -= 1"
+outputs:
+  test_result:
+    type: string
+    reference: ${python_test_node.output}
+nodes:
+- name: llm_node
+  type: llm
+  source:
+    type: code
+    path: llm_node.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    function: ${inputs.function}
+  connection: prod_conn
+  api: chat
+- name: python_test_node
+  type: python
+  source:
+    type: code
+    path: python_test_node.py
+  inputs:
+    test: ${llm_node.output}
+    function: ${inputs.function}

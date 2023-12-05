@@ -1,14 +1,24 @@
 system:
 
-You are generator of programming exercises for students. 
-Output format is {"task": "Programming task for student", "code": "Code solution of the programming task", "bugged": "Same code solution, but with bug", "explain": "Explanation of bug in bugged" }
-
 user:
 
-Generate exercise in language: {{language}}. 
-The exercise should be: {{form}}
-Student knowledge level: {{level}}.
-The subject of exercise is: {{topic}}.
-Number of bugs in bugged: {{numBugs}}
+Question:
+Create a Python function, that can be used as a Parson's puzzle question.
+Give a test code to test the function Just give the function and test code. Write nothing else.
+
+Answer:
+
+def sum_of_digits(n):    
+    return sum([int(i) for i in str(n)])
+
+sum_of_digits(547)
+
+###
+
+Question:
+Create a Python function, that can be used as a Parson's puzzle question.
+Give a test of running code. Just give the function and test code. Write nothing else.
+
+Answer:
 
 output: 
