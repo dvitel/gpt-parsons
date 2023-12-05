@@ -66,6 +66,24 @@ def start_session(req: func.HttpRequest, doc: func.Out[func.Document]) -> func.H
     logging.info(f'[session] started {session}')
     return session
 
+
+def is_submission_correct(domain, proposed, solution, ex):
+    ''' Checks student submission, default fragment-to-fragment match is expected'''
+    if len(proposed) == len(solution) and all(a == b for (a, b) in zip(proposed, solution)):
+        return True 
+    if domain == "python":        
+        proposed_code = os.linesep.join(proposed)
+        gen = ex.get("gen", {})
+        tests = gen.get("tests", "").split(os.linesep) #one by one tests
+        try:
+            for test in tests:
+                glob = {}
+                full_code = f"{proposed_code}{os.linesep}{test}"
+                exec(full_code, glob)
+        except Exception as e:
+            return False #TODO: send back failed test and/or record it in DB also 
+        return True 
+    return False
 @app.route(route="session/{id:guid}", methods=["PUT"], auth_level=func.AuthLevel.ANONYMOUS)
 @app.cosmos_db_input(arg_name="sessions", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", 
                         container_name="session", sql_query="SELECT * FROM session c WHERE c.id={id}")
@@ -114,16 +132,7 @@ def update_session(req: func.HttpRequest, sessions: func.DocumentList, updated: 
         proposed = req_data["fragments"]
         solution = ex["fragmentation"]["fragments"]
         #first check is to compare fragments from ex to proposed fragments 
-        if len(proposed) != len(solution) or any(a != b for (a, b) in zip(proposed, solution)):
-            session["error"] = session.get("error", 0) + 1
-            ex_stats["error"] = ex_stats.get("error", 0) + 1
-
-            #TODO: domain specific checks
-
-            resp["solved"] = False
-            if "explain" in ex["gen"]:
-                resp["hint"] = ex["gen"]["explain"]    
-        else: #correct  
+        if is_submission_correct(domain, proposed, solution, ex):
             solved_ids = set(session.get("solved_ids", []))
             solved_ids.add(puzzle_id)
             session["solved"] = session.get("solved", 0) + 1
@@ -133,7 +142,12 @@ def update_session(req: func.HttpRequest, sessions: func.DocumentList, updated: 
             resp["solved"] = True
             resp["puzzle"] = session_update["puzzle"]
             session.update(**session_update)
-
+        else:            
+            session["error"] = session.get("error", 0) + 1
+            ex_stats["error"] = ex_stats.get("error", 0) + 1
+            resp["solved"] = False
+            if "explain" in ex["gen"]:
+                resp["hint"] = ex["gen"]["explain"]
     db_upsert_exercise(ex)
     updated.set(func.Document.from_dict(session))
     return resp
