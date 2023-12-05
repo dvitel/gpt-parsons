@@ -1,8 +1,8 @@
-let mainModal = null;
 let mainForm = null;
 let sessionId = null;
 let puzzleId = null;
-let currentFragments = {}
+// let currentFragments = {}
+let draggedFragment = null;
 let messageToastEl = null; //error/info messages in form of toast
 let puzzleStats = { moves: 0, start_ts: 0, end_ts: 0 } //only client side portion
 let emptyImg = document.createElement('img')
@@ -70,10 +70,10 @@ const inform = (txt, withProgress = false, cls = []) => {
 
 const newCodeTag = (codeText, codeLang, highlighted = true) => {
     let pre = document.createElement("pre");
-    pre.classList.add("mb-0", "lh-1");    
+    pre.classList.add("mb-0", "lh-1", "p-0");    
     let code = document.createElement("code");
     pre.appendChild(code);
-    code.classList.add("language-" + codeLang, "p-0");
+    code.classList.add("language-" + codeLang, "p-2", "overflow-y-hidden");
     code.innerHTML = codeText;
     if (highlighted) hljs.highlightElement(code);
     return pre
@@ -133,44 +133,57 @@ const elIndex = (el) => [...el.parentElement.children].indexOf(el)
 
 const findFragEl = (el, i = 0) => {
     if (el == null) return null;
-    if (i == 10) return null;
+    if (i == 4) return null;
     if (el.classList.contains("fragment")) return el;
     return findFragEl(el.parentElement, i+1);
 }
 
-function dropFragment(event) {
-    event.preventDefault();
-    const fragmentIdStr = event.dataTransfer.getData("text/plain");
-    const frel = currentFragments[fragmentIdStr];
-    frel.focus({preventScroll:true})
+const focus = (el) => {
+    // el.contentEditable = true;
+    // el.focus({preventScroll:true, focusVisible: true})
+    el.focus({preventScroll:true});
+    // el.contentEditable = false;
 }
 
-function dragoverFragment(event) {
+function dropFragment(event) {
+    // if ("touches" in event) {
+
+    // } else {
     event.preventDefault();
-    const fragmentIdStr = event.dataTransfer.getData("text/plain");
-    const frel = currentFragments[fragmentIdStr];
-    const bellowEl = findFragEl(event.target);
-    if (bellowEl != null && frel != bellowEl) {
-        let curIndex = elIndex(frel);
+    // }
+    focus(draggedFragment);
+}
+
+function dragoverFragment(event) {    
+    event.preventDefault();
+    let bellowEl = null; 
+    if ("touches" in event) {
+        let touchedEl = document.elementFromPoint(event.touches[0].clientX, event.touches[0].clientY);
+        bellowEl = findFragEl(touchedEl)
+    } else {        
+        bellowEl = findFragEl(event.target);
+    }
+    if (bellowEl != null && draggedFragment != bellowEl) {
+        let curIndex = elIndex(draggedFragment);
         let otherIndex = elIndex(bellowEl);
         if (curIndex < otherIndex) {
-            bellowEl.after(frel);
+            bellowEl.after(draggedFragment);
             numChanges++  
         } else if (curIndex > otherIndex) {
-            bellowEl.before(frel);
+            bellowEl.before(draggedFragment);
             numChanges++;
         }
-    }    
+    }
+    focus(draggedFragment);
 }
 
 function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash wrong fragments.", fragments, distractors } = {}) {    
     puzzleId = id;
     mainForm.querySelector(".puzzle-task").innerHTML = task;
-    currentFragments = {}
-    let fragmentId = 0
+    // currentFragments = {}
     let bin = [
         ...fragments.map(f => ({f})),
-        {f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true},
+        {f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim", "p-0"], noCode:true},
         ...distractors.map(f => ({f}))
     ]
     const binEl = mainForm.querySelector(".fragments");
@@ -178,24 +191,25 @@ function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash 
     bin.forEach(({f, cls = [], noCode = false}) => {
         let codeEl = null; 
         if (noCode) {
+            let spanEl = document.createElement("div") 
+            spanEl.classList.add('p-2')
             codeEl = document.createElement("pre")
-            codeEl.innerHTML = f;
+            spanEl.innerHTML = f;
+            codeEl.appendChild(spanEl);
         } else {
             codeEl = newCodeTag(f, domain, true);
         }                
-        codeEl.classList.add("border", "fragment", "px-2", "py-2", ...cls)
+        codeEl.classList.add("border", "fragment", ...cls)
 
         codeEl.draggable = true
         codeEl.tabIndex = 0;
-        codeEl.lastChild.tabIndex = -1;
-        let fragmentIdStr = `${fragmentId}`
-        currentFragments[fragmentIdStr] = codeEl
-        codeEl.addEventListener("click", (ev) => {
-            codeEl.focus({preventScroll:true, focusVisible:true})
+        // codeEl.lastChild.tabIndex = 0;
+        codeEl.addEventListener("click", (ev) => {            
             if (numChanges > 0) {
                 numChanges = 0;
                 moves++;
             }
+            focus(codeEl)
         })
         codeEl.addEventListener("keyup", (ev) => {
             if ((ev.code == "ArrowUp") && codeEl.previousElementSibling) {
@@ -205,25 +219,23 @@ function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash 
                 codeEl.nextElementSibling.after(codeEl) 
                 numChanges++;
             }
-            codeEl.focus({preventScroll:true})
+            focus(codeEl)
         })
-        codeEl.addEventListener("dragstart", (ev) => {
-            // ev.target.classList.add("border-primary")
-            codeEl.focus({preventScroll:true})
-            ev.dataTransfer.setData("text/plain", fragmentIdStr)
-            ev.dataTransfer.effectAllowed = "move";
-            ev.dataTransfer.setDragImage(emptyImg, 0, 0)
+        const dragStart = (ev) => {
+            draggedFragment = codeEl;
+            if ("dataTransfer" in ev) {
+                ev.dataTransfer.effectAllowed = "move";
+                ev.dataTransfer.setDragImage(emptyImg, 0, 0)
+            }
             if (numChanges > 0) {
                 numChanges = 0;
                 moves++;
             }
-        })
-        codeEl.addEventListener("dragend", (ev) => {
-            // ev.target.classList.remove("border-primary")
-        })
-
+            focus(draggedFragment);
+        }
+        codeEl.addEventListener("dragstart", dragStart)
+        codeEl.addEventListener("touchstart", dragStart)
         binEl.appendChild(codeEl)
-        fragmentId++;
     })
 }
 
@@ -298,7 +310,7 @@ async function submitPuzzle(event) {
         await resetSession();
         return;
     }
-    let hintBtn = mainModal.querySelector(".hint")
+    let hintBtn = document.getElementById("hint")
     if (hint) {        
         hintBtn.classList.remove("d-none")
         hintBtn.dataset.hint = hint; 
@@ -313,11 +325,11 @@ async function submitPuzzle(event) {
     if (puzzle) initPuzzle(puzzle);
 }
 
-const showModal = (id) => bootstrap.Modal.getOrCreateInstance("#" + id).show();
+// const showModal = (id) => bootstrap.Modal.getOrCreateInstance("#" + id).show();
 document.addEventListener("DOMContentLoaded", async () => {
-    showModal("main-modal")
-    mainModal = document.getElementById("main-modal")
+    // showModal("main-modal")
+    // mainModal = document.getElementById("main-modal")
     messageToastEl = document.getElementById('message')
-    mainForm = mainModal.querySelector("form");
+    mainForm = document.getElementById("main-form");
     domainChanged(mainForm.querySelector("[name=domain]").value);
 })

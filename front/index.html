@@ -3,6 +3,7 @@
     <head>
         <title>GPT-Parsons</title>      
         <meta charset="utf-8">
+        <meta name="description" content="Simple puzzles for training code skills for Python language. Code is split onto fragments with added distractors. Arrange them to form correct solution!" />        
         <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">    
         <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.1.0/css/all.css" integrity="sha384-lKuwvrZot6UHsBSfcMvOkWwlCMgc0TaWr+30HWe3a4ltaBwTZhyTEggF5tJv8tbt" crossorigin="anonymous">
         <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
@@ -21,47 +22,50 @@
                 -webkit-user-select: none; 
                 -ms-user-select: none; 
                 user-select: none;
+                border-style: dotted !important;
             }
             .fragment:focus {
-                border: 1px solid rgb(214, 139, 0) !important;
+                outline: 1px solid black ;
+            }
+            .main-block {
+                max-width: 768px;
+                margin-left: auto;
+                margin-right: auto;
             }
         </style>
     </head>
     <body>
-        <div class="modal" tabindex="-1" id="main-modal" data-bs-backdrop="false" data-bs-keyboard="false" data-bs-focus="false">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                <div class="modal-header">
-                    <h1 class="modal-title h5">GPT-Parsons</h1>
-                </div>
-                <div class="modal-body">
-                    <form id="main-form" action="https://gpt-parsons.azurewebsites.net/api/session" onsubmit="submitPuzzle(event)">
-                        <div class="form-floating">
-                            <select class="form-select" id="domain" name="domain" onchange="domainChanged(event.target.value)">
-                                <option value="python">Python programming</option>
-                                <option value="history" disabled>History (TBD)</option>
-                                <option value="chain" disabled>Chain of reason (TBD)</option>
-                            </select>    
-                            <label for="domain">Exercise domain</label>
-                        </div>                        
-                        <div class="form-group puzzle-task">
-                            
-                        </div>
-                        <div class="form-group">
-                            <div class="fragments" ondrop="dropFragment(event)" ondragover="dragoverFragment(event)"></div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <div class="d-flex w-100 justify-content-between">
-                        <div><button type="button" name="solve" onclick="resetSession()" class="btn btn-outline-secondary">Reset Session</button></div>
-                        <div>                            
-                            <button type="button" onclick="showHint(event)" form="main-form" name="skip" class="d-none btn btn-outline-danger hint">Hint</button>
-                            <button type="submit" form="main-form" name="skip" class="btn btn-secondary">Skip</button>
-                            <button type="submit" form="main-form" name="solve" class="btn btn-primary">Submit</button>
-                        </div>
+        <div class="main-block mt-0 mt-sm-3">
+            <div class="d-flex flex-wrap align-items-end justify-content-between lh-1 mb-1">
+                <h1 class="fw-normal h2 mb-0">GPT-Parsons</h1>
+                <div class="small">Arrange fragments in correct order. Trash distractors.</div>
+            </div>
+            <div>
+                <form id="main-form" action="https://gpt-parsons.azurewebsites.net/api/session" onsubmit="submitPuzzle(event)">
+                    <div class="form-floating mb-2">
+                        <select class="form-select" id="domain" name="domain" onchange="domainChanged(event.target.value)">
+                            <option value="python">Python programming</option>
+                            <option value="history" disabled>History (TBD)</option>
+                            <option value="chain" disabled>Chain of reason (TBD)</option>
+                        </select>    
+                        <label for="domain">Exercise domain</label>
+                    </div>                        
+                    <div class="form-group puzzle-task mb-2 small lh-1 font-monospace"></div>
+                    <div class="form-group">
+                        <div class="fragments" style="touch-action: none; overscroll-behavior:none"
+                            ondragover="dragoverFragment(event)" ontouchmove="dragoverFragment(event)"
+                            ondrop="dropFragment(event)" ontouchend="dropFragment(event)"></div>
                     </div>
-                </div>
+                </form>
+            </div>
+            <div class="p-1">
+                <div class="d-flex w-100 justify-content-between">
+                    <div><button type="button" name="solve" onclick="resetSession()" class="btn btn-outline-secondary">Reset Session</button></div>
+                    <div>                            
+                        <button type="button" onclick="showHint(event)" form="main-form" name="skip" id="hint" class="d-none btn btn-outline-danger">Hint</button>
+                        <button type="submit" form="main-form" name="skip" class="btn btn-secondary">Skip</button>
+                        <button type="submit" form="main-form" name="solve" class="btn btn-primary">Submit</button>
+                    </div>
                 </div>
             </div>
         </div>
