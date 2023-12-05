@@ -17,13 +17,20 @@ app = func.FunctionApp(http_auth_level=func.AuthLevel.FUNCTION)
 
 def get_puzzle_for_session(domain, last_puzzle_id):
     session_update = db_get_puzzle_for_session(domain, last_puzzle_id)
+    if session_update["puzzle"] is None:
+        session_update = db_get_puzzle_for_session(domain, 0)      
     puzzle = session_update["puzzle"]
+    last_puzzle_id = session_update["last_puzzle_id"]
+    # logging.warn(f"Obtained puzzle {last_puzzle_id}: {puzzle}")  
     if puzzle["shuffled"]:
         all_fragments = [*puzzle.get("fragments", []), *puzzle.get("distractors", [])]
         random.shuffle(all_fragments)
-        split_point = random.randint(0, len(all_fragments) - 1)
-        puzzle["fragments"] = all_fragments[:split_point]
-        puzzle["distractors"] = all_fragments[split_point:]
+        if puzzle.get("noTrash", False):
+            puzzle["fragments"] = all_fragments
+        else:
+            split_point = random.randint(0, len(all_fragments) - 1)
+            puzzle["fragments"] = all_fragments[:split_point]
+            puzzle["distractors"] = all_fragments[split_point:]
     return session_update
 
 @app.route(route="session", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
@@ -49,10 +56,7 @@ def start_session(req: func.HttpRequest, doc: func.Out[func.Document]) -> func.H
         prev_session = db_get_session(prev_session_id, domain)
         if prev_session is not None:
             last_puzzle_id = prev_session.get("last_puzzle_id", 0)            
-            if prev_session.get("solved", 0) > 0: #solved puzzles 
-                prev_session["end_ts"] = int(time())            
-                db_upsert_session(prev_session)
-            else: 
+            if prev_session.get("solved", 0) == 0: #solved puzzles 
                 del prev_session["puzzle"]
                 session = prev_session
                 session["stats"] = {}
@@ -109,7 +113,7 @@ def update_session(req: func.HttpRequest, sessions: func.DocumentList, updated: 
     puzzle_id = puzzle["id"]
     ex = db_get_exercise(puzzle_id)    
     if ex is None: 
-        return {"reset": True}
+        return {"reset": True,"solved":False}
     ex_stats = ex.setdefault("stats", {})    
     skip = req_data["skip"]
     puzzle_stats = req_data.get("stats", {})
@@ -149,6 +153,7 @@ def update_session(req: func.HttpRequest, sessions: func.DocumentList, updated: 
             if "explain" in ex["gen"]:
                 resp["hint"] = ex["gen"]["explain"]
     db_upsert_exercise(ex)
+    session["end_ts"] = int(time())
     updated.set(func.Document.from_dict(session))
     return resp
 
@@ -362,7 +367,7 @@ def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) ->
     doc = process_entity(ex[0])    
     gen = req.get_json() #update generated
     doc["gen"] = gen
-    logging.info(f"[update_programming_exercise] Update {doc}") 
+    # logging.info(f"[update_programming_exercise] Update {doc}") 
     doc["update_ts"] = int(time())
     # db_save_exercise(doc)
     validation = { "is_valid": True, "validated_ts": int(time()) } #starts validation here 
@@ -370,15 +375,6 @@ def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) ->
         #1. compile code 
         code = gen["code"]
         tests = gen.get("tests", "").split(os.linesep) #one by one tests
-        # try:            
-        #     correct_code = compile(full_code, 'multiline', 'exec')  
-        #     validation["compile"] = True
-        # except Exception as e:            
-        #     validation["compile"] = False
-        #     validation["error"] = "SyntaxError"
-        #     validation["message"] = str(e)
-        #     correct_code = None
-        # #2. run generated tests
         current_test = ""
         tests_passed = 0
         try:
@@ -397,16 +393,59 @@ def update_programming_exercise(req: func.HttpRequest, ex: func.DocumentList) ->
         validation["tests_passed"] = tests_passed
     doc["validation"] = validation
     doc["status"] = "validated" if validation["is_valid"] else "error"
-    
-    fragmentation = {}
-    if validation["is_valid"]:        
-        logging.info(f"[fragmentation] starts")
+        
+    if validation["is_valid"]:
+        fragmentation = {}
         fragments = gen["code"].splitlines()
         fragments_set = set(fragments)
         bugged = gen["incorrect"].splitlines()
         bugged_fragments = [f for f in bugged if f not in fragments_set]
         fragmentation["fragments"] = fragments
         fragmentation["distractors"] = bugged_fragments
+        doc["fragmentation"] = fragmentation
+    logging.info(f"[update_programming_exercise] Saving...") 
+    db_save_exercise(doc)
+    return doc
+
+@app.route(route="exercise/{id:guid}/history", methods=["PUT"])
+@app.cosmos_db_input(arg_name="ex", connection="CosmosDbConnectionString", database_name="gpt-parsons-db", 
+                        container_name="exercise", sql_query="SELECT * FROM exercise c WHERE c.id={id}")
+@validate_as_json(input_schema={
+    "type": "object",
+    "properties": {
+        "task": {"type":"string", "maxLength": 1024},
+        "events": { 
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "date" : {"type":"string", "maxLength":255},
+                    "event" : {"type":"string", "maxLength":1024},
+                    "link" : {"type":"string","maxLength":2047}
+                }
+            },
+            "maxItems": 30
+        }
+    },
+    "minProperties": 2,
+    "additionalProperties": False
+}, outputs_404=True)
+def update_history_exercise(req: func.HttpRequest, ex: func.DocumentList) -> func.HttpResponse:
+    doc = process_entity(ex[0])    
+    gen = req.get_json() #update generated
+    doc["gen"] = gen
+    # logging.info(f"[update_history_exercise] Update {doc}") 
+    doc["update_ts"] = int(time())
+    # db_save_exercise(doc)
+    validation = { "is_valid": True, "validated_ts": int(time()) } #starts validation here 
+    #TODO: link validation
+    doc["validation"] = validation
+    doc["status"] = "validated" if validation["is_valid"] else "error"
+        
+    if validation["is_valid"]:        
+        fragmentation = {"noTrash":True}
+        fragments = [ev["event"] for ev in gen["events"]]
+        fragmentation["fragments"] = fragments
         doc["fragmentation"] = fragmentation
     logging.info(f"[update_programming_exercise] Saving...") 
     db_save_exercise(doc)

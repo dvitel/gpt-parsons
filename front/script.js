@@ -75,7 +75,7 @@ const newCodeTag = (codeText, codeLang, highlighted = true) => {
     pre.appendChild(code);
     code.classList.add("language-" + codeLang, "p-2", "overflow-y-hidden");
     code.innerHTML = codeText;
-    if (highlighted) hljs.highlightElement(code);
+    if (highlighted){ hljs.highlightElement(code); } else { code.classList.add("d-inline-block")}
     return pre
 }
 
@@ -177,13 +177,19 @@ function dragoverFragment(event) {
     focus(draggedFragment);
 }
 
-function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash wrong fragments.", fragments, distractors } = {}) {    
+const getCategory = (domain) => {
+    const languages = {"python":true}        
+    if (languages[domain]) return "programming";
+    return domain;
+}
+
+function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash wrong fragments.", fragments, distractors, noTrash = false } = {}) {    
     puzzleId = id;
     mainForm.querySelector(".puzzle-task").innerHTML = task;
     // currentFragments = {}
-    let bin = [
+    let bin = noTrash ? fragments.map(f => ({f})) : [
         ...fragments.map(f => ({f})),
-        {f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim", "p-0"], noCode:true},
+        {f:"Drag incorrect fragments below this one", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim", "p-0"], noCode:true},
         ...distractors.map(f => ({f}))
     ]
     const binEl = mainForm.querySelector(".fragments");
@@ -197,7 +203,7 @@ function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash 
             spanEl.innerHTML = f;
             codeEl.appendChild(spanEl);
         } else {
-            codeEl = newCodeTag(f, domain, true);
+            codeEl = newCodeTag(f, domain, getCategory(domain) == "programming");
         }                
         codeEl.classList.add("border", "fragment", ...cls)
 
@@ -303,7 +309,7 @@ async function submitPuzzle(event) {
     }    
     let data = { fragments, stats: { moves }, skip}
     let { solved, puzzle, hint, reset = false } = await fetchAPI(mainForm.action + "/" + sessionId, "PUT", data) || {}
-    if (typeof solved == "undefined") return;     
+    if (typeof solved == "undefined") return;         
     moves = 0;
     if (reset) {
         inform("Exercise was deleted. Fetching new one...")

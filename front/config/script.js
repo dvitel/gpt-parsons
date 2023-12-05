@@ -83,7 +83,7 @@ const newCodeTag = (codeText, codeLang, highlighted = true) => {
     pre.appendChild(code);
     code.classList.add("language-" + codeLang, "p-0");
     code.innerHTML = codeText;
-    if (highlighted) hljs.highlightElement(code);
+    if (highlighted) { hljs.highlightElement(code); } else { code.classList.add("d-inline-block")}
     return pre
 }
 
@@ -214,7 +214,7 @@ const props_to_div = (target, data, withHeader = true, cls = [], codeLang = "") 
                 headerDiv.innerHTML = p;
                 div.appendChild(headerDiv);
             }
-            let codeEl = newCodeTag(data[p], codeLang, true)
+            let codeEl = newCodeTag(data[p], codeLang, getCategory(codeLang) == "programming")
             div.appendChild(codeEl);
         }
         target.appendChild(div)
@@ -321,7 +321,7 @@ async function approvePuzzle(event) {
 }
 
 async function initParsonsModal({ id, task = "Sort fragments in correct order. Trash wrong fragments.", 
-                    fragments = [], distractors = [], domain = "", shuffled = false, enabled = true, replace = false }) {    
+                    fragments = [], distractors = [], domain = "", noTrash = false, shuffled = false, enabled = true, replace = false }) {    
     let parsonsModalEl = document.getElementById("fragments-modal")     
     const saveBtlEl = parsonsModalEl.querySelector(".save-puzzle")
     saveBtlEl.dataset.id = id
@@ -334,15 +334,16 @@ async function initParsonsModal({ id, task = "Sort fragments in correct order. T
         distractors = res.distractors;
         shuffled = res.shuffled;
         enabled = res.enabled;
+        noTrash = res.noTrash;
     }
     parsonsModalEl.querySelector(".puzzle-task").innerHTML = task 
     parsonsModalEl.querySelector(".puzzle-shuffle").checked = shuffled
     parsonsModalEl.querySelector(".puzzle-enabled").checked = enabled
     currentFragments = {}           
     let fragmentId = 0
-    const bins = {".fragments":[
+    const bins = {".fragments": noTrash ? fragments.map(f => ({f})) : [
         ...fragments.map(f => ({f})),
-        {f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true},
+        {f:"Drag incorrect fragments below this one", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true},
         ...distractors.map(f => ({f}))
     ]}
     Object.keys(bins).forEach(bin => {
@@ -354,7 +355,7 @@ async function initParsonsModal({ id, task = "Sort fragments in correct order. T
                 codeEl = document.createElement("pre")
                 codeEl.innerHTML = f;
             } else {
-                codeEl = newCodeTag(f, domain, true);
+                codeEl = newCodeTag(f, domain, getCategory(domain) == "programming");
             }                
             codeEl.classList.add("border", "fragment", "px-2", "py-2", ...cls)
 
@@ -391,16 +392,34 @@ async function initParsonsModal({ id, task = "Sort fragments in correct order. T
     })
 }
 
-async function saveGenerated(event) {
-    event.preventDefault(); //do not actually submit
+function getProgrammingData(formEl) {
     const data = {};
-    [...event.currentTarget.querySelectorAll(".gen-ex-field")].forEach(el => {
+    [...formEl.querySelectorAll(".gen-ex-field")].forEach(el => {
         const fieldName = [...el.classList].find(cl => cl.startsWith("ex-")).substring(3)
         data[fieldName] = el.innerText;
-    });
+    });   
+    return data; 
+}
+
+function getHistoryData(formEl) {
+    const data = {};
+    data["task"] = formEl.querySelector(".ev-task").innerText;
+    data["events"] = [];
+    [...formEl.querySelectorAll(".ev-holder")].forEach(evData => {
+        let date = evData.querySelector(".ev-date").innerText
+        let event = evData.querySelector(".ev-ev").innerText
+        let link = evData.querySelector(".ev-link").innerText
+        data["events"].push({ date, event, link });
+    })
+    return data;     
+}
+
+async function saveGenerated(event) {
+    event.preventDefault(); //do not actually submit
     const { id, category, modalId } = event.currentTarget.dataset
-    // console.log(data);
-    const { validation: {validated_ts, is_valid, error, test} = {}, fragmentation: {fragments = [], distractors = []} = {}, settings: { domain } = {}, gen = {} } = 
+    const dataGetters = {"programming":getProgrammingData, "history":getHistoryData}
+    const data = dataGetters[category](event.currentTarget);
+    const { validation: {validated_ts, is_valid, error, test} = {}, fragmentation: {fragments = [], distractors = [], noTrash = false} = {}, settings: { domain } = {}, gen = {} } = 
         await fetchAPI(event.currentTarget.action + "/" + id + "/" + category, 
             "PUT", data, "validating...") || {}
     if (!validated_ts) return;    
@@ -408,11 +427,47 @@ async function saveGenerated(event) {
     inform(is_valid ? "Exercise is valid" : `${error} ${test}`, false, [is_valid ? "text-success" : "text-danger", "fw-bold"])
     //open modal for fragments shuffling - later other functionality
     if (is_valid) {        
-        await initParsonsModal({ id, task: gen.task, fragments, distractors, domain, replace: true });
+        await initParsonsModal({ id, task: gen.task, fragments, distractors, domain, noTrash, replace: true });
         hideModal(modalId);
         await sleep(200);
         showModal("fragments-modal")
     }
+}
+
+function prefillProgrammingModal(domain, modalEl, detailsObj) {
+    Object.keys(detailsObj).forEach(k => {
+        let el = modalEl.querySelector(`.ex-${k}`);
+        if (el) {el.innerHTML = detailsObj[k]}
+        else { console.log("missing element for property ", k)}
+    });
+    const form = modalEl.querySelector("form");
+    [...form.querySelectorAll(".gen-code")].forEach(el => {
+        el.lastChild.classList.add(`language-${domain}`)
+        hljs.highlightElement(el.lastChild);
+    });            
+    return form;
+}
+
+function editable_pre(txt, cls = []) {
+    let preel = document.createElement("pre")
+    preel.innerHTML = txt 
+    preel.contentEditable = true; 
+    preel.classList.add("mb-0",...cls)
+    return preel;
+}
+
+function prefillHistoryModal(domain, modalEl, { events = [] }) {
+    const form = modalEl.querySelector("form");
+    let evel = form.querySelector(".gen-ex-events")
+    events.forEach(({ date, event, link}) => {
+        let divel = document.createElement("div")
+        divel.classList.add("ev-holder", "mb-3", "small")
+        divel.appendChild(editable_pre(date, ["ev-date","fw-bold", 'me-2']))
+        divel.appendChild(editable_pre(event, ["ev-ev","txt-secondary", "me-2"]))
+        divel.appendChild(editable_pre(link, ["ev-link","txt-info", 'me-2']))
+        evel.appendChild(divel)
+    })
+    return form;
 }
 
 function render_exercises(dataList) {    
@@ -477,8 +532,15 @@ function render_exercises(dataList) {
                     genEl.appendChild(el);
                 })
                 
+                const { validated_ts, error, message } = validation
                 const valEl = row.querySelector(".exercise-validation")
-                props_to_div(valEl, {});
+
+                if (validated_ts) {
+                    props_to_div(valEl, { "":error || "Valid" }, false, [!error ? "text-success" : "text-danger"])
+                    if (message) props_to_div(valEl, { message }, false, ["small"])
+                } else {
+                    props_to_div(valEl, {});
+                }
                 break;
             }
             case "chain": {
@@ -542,17 +604,8 @@ function render_exercises(dataList) {
                 case "gen_ex": {
                     const modalId = `${category}-modal`;                    
                     const modalEl = document.getElementById(modalId);
-                    detailsObj = gen
-                    Object.keys(detailsObj).forEach(k => {
-                        let el = modalEl.querySelector(`.ex-${k}`);
-                        if (el) {el.innerHTML = detailsObj[k]}
-                        else { console.log("missing element for property ", k)}
-                    });
-                    const form = modalEl.querySelector("form");
-                    [...form.querySelectorAll(".gen-code")].forEach(el => {
-                        el.lastChild.classList.add(`language-${domain}`)
-                        hljs.highlightElement(el.lastChild);
-                    });            
+                    let prefill = {"programming": prefillProgrammingModal, "history": prefillHistoryModal}
+                    let form = prefill[category](domain, modalEl, gen)
                     form.dataset.id = id;
                     form.dataset.category = category;
                     showModal(modalId);
@@ -604,7 +657,7 @@ function render_ops (dataList) {
         props_to_div(row.querySelector(".op-time"), {duration}, true, ["small"]);
         let statusToCls = { "active": "text-info", "done": "text-success", "error": "text-danger"}
         props_to_div(row.querySelector(".op-status"), {status}, false, ["text-uppercase", statusToCls[status] || "" ])
-        props_to_div(row.querySelector(".op-status"), {"# exercises": num == 1 ? null: num}, true, ["small"]);
+        props_to_div(row.querySelector(".op-status"), {"# exercises": num}, true, ["small"]);
         props_to_div(row.querySelector(".op-domain"), {domain}, false)
         props_to_div(row.querySelector(".op-domain"), {topic}, false, ["small"])
         props_to_div(row.querySelector(".op-settings"), { form, level, numErrors, complexity, avoid: avoid.length == 0 ? null : avoid}, true, ["small"])
@@ -795,6 +848,7 @@ function exerciseCreationInit() {
 
     modalEl.addEventListener("hide.bs.modal", () => { cancelLogsOp(); refreshDash() })
     modalEl.addEventListener("shown.bs.modal", () => { 
+        clearEl(document.getElementById("creation-log"))
         modalEl.querySelector("[type=submit]").disabled = false;
         creationInProgress = false;
     })

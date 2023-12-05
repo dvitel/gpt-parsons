@@ -321,21 +321,21 @@
                         onsubmit="saveGenerated(event)" action="https://gpt-parsons.azurewebsites.net/api/exercise">
                         <div class="mb-2">
                             <label for="task">Task</label>
-                            <pre contenteditable="true" class="gen-ex-field ex-task mb-0 lh-sm">Put historical events in chronological order</pre>
+                            <pre contenteditable="true" class="ev-task mb-0 lh-sm">Put historical events in chronological order</pre>
                         </div>
-                        <div class="mb-2">
-                            <label for="events">Events</label>
-                            <pre contenteditable="true" class="gen-ex-field ex-events mb-0 lh-sm"></pre>
+                        <div class="mb-2 gen-ex-events">
                         </div>
-                        <div class="mb-2">
-                            <label for="untrue">Unture</label>
-                            <pre contenteditable="true" class="gen-ex-field ex-untrue mb-0 lh-sm"></pre>
-                        </div>
+                        <!-- <div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input puzzle-enabled" type="checkbox" id="shuffleForEverySession" checked>
+                                <label class="form-check-label" for="shuffleForEverySession">Display date prefix</label>
+                            </div>
+                        </div>                              -->
                     </form>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" form="history-modal-form" class="btn btn-primary" disabled>Save & Validate</button>
+                    <button type="submit" form="history-modal-form" class="btn btn-primary">Save & Validate</button>
                 </div>
               </div>
             </div>

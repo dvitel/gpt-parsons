@@ -1,3 +1,4 @@
+import logging
 from time import time
 from azure.cosmos import CosmosClient
 import uuid
@@ -34,6 +35,11 @@ def db_delete_exercise_creation_active(operation):
         return False     
     
 def db_delete_exercise(ex):
+    container = db_container(f"puzzle")
+    try:
+        container.delete_item(ex["id"], ex["settings"]["domain"])
+    except Exception: #ignore error if key is absent
+        pass 
     container = db_container(f"exercise")
     try:
         container.delete_item(ex["id"], ex["settings"]["domain"])
@@ -76,9 +82,7 @@ def db_upsert_session(session):
 def db_get_puzzle_for_session(domain, last_puzzle_id):
     container = db_container("puzzle")
     puzzle = next(container.query_items('SELECT * FROM puzzle c WHERE c.enabled=true ORDER BY c._ts DESC OFFSET @pid LIMIT 1', 
-                                                    parameters=[ {"name": "@pid", "value": last_puzzle_id} ], partition_key=domain), None)
-    if puzzle is None: 
-        return db_get_puzzle_for_session(domain, 0)
+                                                    parameters=[ {"name": "@pid", "value": last_puzzle_id} ], partition_key=domain), None)    
     return {"puzzle":puzzle, "last_puzzle_id":last_puzzle_id+1}
 
 def db_get_exercise(ex_id):
