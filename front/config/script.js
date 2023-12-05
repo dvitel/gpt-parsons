@@ -106,11 +106,10 @@ function getAuthKey() {
 let fetchOpsCount = 0;
 const decFetchOps = () => {
     fetchOpsCount--;    
-    if (fetchOpsCount == 0) {
+    if (fetchOpsCount <= 0) {
+        fetchOpsCount = 0;
         hideInform = true;
         after(300, () => { if (hideInform) inform() }); //hide toast
-    } else if (fetchOpsCount < 0) {
-        fetchOpsCount = 0;
     }
 }
 
@@ -241,6 +240,7 @@ function dropFragment(event) {
 const elIndex = (el) => [...el.parentElement.children].indexOf(el)
 
 const findFragEl = (el, i = 0) => {
+    if (el == null) return null;
     if (i == 10) return null;
     if (el.classList.contains("fragment")) return el;
     return findFragEl(el.parentElement, i+1);
@@ -312,30 +312,38 @@ async function approvePuzzle(event) {
         }        
     })
     let shuffled = fragModalEl.querySelector(".puzzle-shuffle").checked;
-    const { id:createdId } = await fetchAPI(url + "/" + id, "POST", { domain, task, fragments, distractors, shuffled }) || {}
+    let enabled = fragModalEl.querySelector(".puzzle-enabled").checked;
+    const { id:createdId } = await fetchAPI(url + "/" + id, "POST", { domain, task, fragments, distractors, shuffled, enabled }) || {}
     if (createdId) {
         hideModal("fragments-modal")
         await refreshDash();
     }
 }
 
-async function initParsonsModal({ id, task:defaultTask = "Sort fragments in correct order. Trash wrong fragments.", 
-                    fragments:defaultFragments = [], distractors:defaultDistractors = [], domain = "" }) {    
+async function initParsonsModal({ id, task = "Sort fragments in correct order. Trash wrong fragments.", 
+                    fragments = [], distractors = [], domain = "", shuffled = false, enabled = true, replace = false }) {    
     let parsonsModalEl = document.getElementById("fragments-modal")     
     const saveBtlEl = parsonsModalEl.querySelector(".save-puzzle")
     saveBtlEl.dataset.id = id
     saveBtlEl.dataset.domain = domain
     //first fetch existign puzzle if any     
-    let { task = defaultTask, fragments = defaultFragments, distractors = defaultDistractors, shuffled = false } = 
-        await fetchAPI(saveBtlEl.dataset.url + "/" + id, "GET", null, "loading puzzle...", true) || {}
+    if (!replace) {
+        let res = await fetchAPI(saveBtlEl.dataset.url + "/" + id, "GET", null, "loading puzzle...", true) || {}
+        task = res.task;
+        fragments = res.fragments;
+        distractors = res.distractors;
+        shuffled = res.shuffled;
+        enabled = res.enabled;
+    }
     parsonsModalEl.querySelector(".puzzle-task").innerHTML = task 
     parsonsModalEl.querySelector(".puzzle-shuffle").checked = shuffled
+    parsonsModalEl.querySelector(".puzzle-enabled").checked = enabled
     currentFragments = {}           
     let fragmentId = 0
     const bins = {".fragments":[
         ...fragments.map(f => ({f})),
-        ...((distractors.length > 0) ? [{f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true}] : []),
-        ...distractors.map(f => ({f, cls:["bg-light"]}))
+        {f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true},
+        ...distractors.map(f => ({f}))
     ]}
     Object.keys(bins).forEach(bin => {
         const binEl = parsonsModalEl.querySelector(bin);
@@ -400,7 +408,7 @@ async function saveGenerated(event) {
     inform(is_valid ? "Exercise is valid" : `${error} ${test}`, false, [is_valid ? "text-success" : "text-danger", "fw-bold"])
     //open modal for fragments shuffling - later other functionality
     if (is_valid) {        
-        await initParsonsModal({ id, task: gen.task, fragments, distractors, domain });
+        await initParsonsModal({ id, task: gen.task, fragments, distractors, domain, replace: true });
         hideModal(modalId);
         await sleep(200);
         showModal("fragments-modal")
@@ -412,11 +420,13 @@ function render_exercises(dataList) {
     const exerciseRowEl = document.getElementById("exercise-row")
     defaultRenderer(exerciseTableEl, dataList, exerciseRowEl, (row, { id, creation_ts, update_ts,
             status, settings: { domain, topic, form, level, numErrors, complexity, avoid } = {},
-            gen = {}, validation = {}, stats = {}, fragmentation: { fragments = [], distractors = [] } = {}
+            gen = {}, validation = {}, stats: { skipped = 0, solved = 0, moves = 0, error = 0 } = {}, 
+            fragmentation: { fragments = [], distractors = [] } = {},
+            puzzle: {enabled} = { }
         }) => {
-        let statusToCls = { "approved": "text-success", "raw": "text-secondary-emphasis", "error": "text-danger-emphasis", "validated": "text-info", "disabled":"text-secondary"}
+        let statusToCls = { "approved": "text-success", "raw": "text-secondary-emphasis", "error": "text-danger-emphasis", "validated": "text-info"}
         props_to_div(row.querySelector(".exercise-status"), {status}, false, ["text-uppercase", "fw-bold", statusToCls[status] || "" ])        
-        props_to_div(row.querySelector(".exercise-status"), {"updated":dtToStr(update_ts), "created":dtToStr(creation_ts)});
+        props_to_div(row.querySelector(".exercise-status"), {"updated":dtToStr(update_ts), "created":dtToStr(creation_ts)}, true, ["small"]);
         props_to_div(row.querySelector(".exercise-domain"), {domain}, false)
         props_to_div(row.querySelector(".exercise-domain"), {topic}, false, ["small"])
         // props_to_div(row.querySelector(".exercise-settings"), { form, level, numErrors, complexity, avoid: avoid.length == 0 ? null : avoid}, true, ["small"]);
@@ -431,13 +441,14 @@ function render_exercises(dataList) {
                 props_to_div(genEl, { task }, false, ["mb-1"])
                 props_to_div(genEl, { code }, false, [], domain)
                 
-                const { validated_ts, error, message, test } = validation
+                const { validated_ts, error, message, test, tests_passed } = validation
                 const valEl = row.querySelector(".exercise-validation")
 
                 if (validated_ts) {
                     props_to_div(valEl, { "":error || "Valid" }, false, [!error ? "text-success" : "text-danger"])
                     if (message) props_to_div(valEl, { message }, false, ["small"])
                     if (test) props_to_div(valEl, { test }, false, ["small"], domain)
+                    if (tests_passed) props_to_div(valEl, { "tests passed": tests_passed }, true, ["small"])
                     // props_to_div(valEl, { "":dtToStr(validated_ts) }, false, ["small"])
                 } else {
                     props_to_div(valEl, {});
@@ -446,9 +457,64 @@ function render_exercises(dataList) {
                 break;
             }
             case "history": {
+                const { events = [], untrue = []  } = gen
+                let genEl = document.createElement("div")
+                genEl.style.maxHeight = "20ex";
+                genEl.style.overflowY = "auto";
+                row.querySelector(".exercise-gen").appendChild(genEl);
+                events.forEach(({ date, event, link }) => {
+                    let el = document.createElement("div")
+                    let dateEl = document.createElement("span")
+                    dateEl.classList.add("me-2")
+                    dateEl.innerHTML = date 
+                    let eventEl = document.createElement("a")
+                    eventEl.setAttribute("target", "_blank")
+                    eventEl.classList.add("link-secondary")
+                    eventEl.innerHTML = event 
+                    eventEl.href=link;
+                    el.appendChild(dateEl)
+                    el.appendChild(eventEl)
+                    genEl.appendChild(el);
+                })
+                
+                const valEl = row.querySelector(".exercise-validation")
+                props_to_div(valEl, {});
                 break;
             }
             case "chain": {
+                const { task, premises = [], untrue = [], conclusions =[]  } = gen
+                let genEl = document.createElement("div")
+                genEl.style.maxHeight = "10ex";
+                genEl.style.overflowY = "auto";
+                row.querySelector(".exercise-gen").appendChild(genEl);
+                props_to_div(genEl, {"":"premises:"}, false);
+                premises.forEach(({ premise, rel }) => {
+                    let el = document.createElement("div")
+                    let el1 = document.createElement("span")
+                    el1.classList.add("me-2", "text-secondary")
+                    el1.innerHTML = premise;
+                    let el2 = document.createElement("span")
+                    el2.innerHTML = rel;
+                    el.appendChild(el1)
+                    el.appendChild(el2)
+                    genEl.appendChild(el);
+                })
+                props_to_div(genEl, {"":"conclusions:"}, false);
+                conclusions.forEach(({ fact, rel }) => {
+                    let el = document.createElement("div")
+                    let el1 = document.createElement("span")
+                    el1.classList.add("me-2", "text-success")
+                    el1.innerHTML = fact;
+                    let el2 = document.createElement("span")
+                    el2.innerHTML = rel;
+                    el.appendChild(el1)
+                    el.appendChild(el2)
+                    genEl.appendChild(el);
+                })
+                
+                const valEl = row.querySelector(".exercise-validation")
+                props_to_div(valEl, {});
+
                 break;
             }
             default: {
@@ -456,14 +522,20 @@ function render_exercises(dataList) {
                 break;
             }
         }        
-        props_to_div(row.querySelector(".exercise-stats"), stats)
+        let statsEl = row.querySelector(".exercise-stats")
+        if (typeof enabled != "undefined") {
+            props_to_div(statsEl, {"puzzle": enabled ? "visible" : "hidden"}, true, ["small", enabled ? "text-success" : "text-danger"])
+            let stts = {moves, solved, skipped, errors: error}
+            if (Object.keys(stts).some(k => !!stts[k])) props_to_div(statsEl, stts, true, ["small"])
+        } else {
+            props_to_div(statsEl, {})
+        }
         const detailsEl = row.querySelector(".exercise-details")
         const removeActions = (...acts) => {
             acts.forEach(a => detailsEl.querySelector(`[value=${a}]`).remove())
         }
-        const actionsToRemove = {"raw": ["disable_ex", "enable_ex", "validate_ex"], "error": ["disable_ex", "enable_ex"], 
-                                 "validated": [ "disable_ex", "enable_ex" ], "approved": ["enable_ex"], "disabled": ["disable_ex"]}
-        removeActions(...actionsToRemove[status])
+        const actionsToRemove = {"raw": ["validate_ex"]}
+        removeActions(...(actionsToRemove[status] || []))
         detailsEl.addEventListener("change", async (e) => {
             e.preventDefault();
             switch (detailsEl.value) {
@@ -545,7 +617,10 @@ function render_ops (dataList) {
         })
         let waiting = num - success - fail;
         if (waiting < 0) waiting = 0;
-        props_to_div(row.querySelector(".op-log"), { success, fail, waiting })
+        let logel = row.querySelector(".op-log");
+        if (success > 0) props_to_div(logel, {success}, true, ["text-success", "fw-bold"])
+        if (fail > 0) props_to_div(logel, {fail}, true, ["text-danger", "fw-bold"])
+        if (waiting > 0) props_to_div(logel, {waiting}, true, ["text-info", "fw-bold"])
 
         const detailsEl = row.querySelector(".op-details")
         detailsEl.addEventListener("change", async (e) => {
@@ -586,6 +661,34 @@ function render_ops (dataList) {
     })
 }
 
+function render_sessions(dataList) {
+    const sessionTableEl = document.getElementById("session-table")
+    const sessionRowEl = document.getElementById("session-row")        
+    defaultRenderer(sessionTableEl, dataList, sessionRowEl, (row, { 
+            start_ts, end_ts = null, domain, solved = 0, skipped = 0, error = 0, moves = 0
+        }) => {
+        [start_date, start_time] = dtToStr(start_ts, true).split(" ")
+        let datetime = "";
+        if (!end_ts) {
+            datetime = `${start_date} ${start_time} → now`    
+        } else {
+            [end_date, end_time] = dtToStr(end_ts, true).split(" ")
+            if (start_date == end_date) {
+                datetime = `${start_date} ${start_time} → ${end_time}`    
+            } else {
+                datetime = `${start_date} ${start_time} → ${end_date} ${end_time}`
+            }
+        }
+        
+        props_to_div(row.querySelector(".session-time"), {datetime}, false);
+        props_to_div(row.querySelector(".session-domain"), {domain}, false)
+        props_to_div(row.querySelector(".session-solved"), {solved:`${solved}`}, false)
+        props_to_div(row.querySelector(".session-skipped"), {solved:`${skipped}`}, false)
+        props_to_div(row.querySelector(".session-error"), {solved:`${error}`}, false)
+        props_to_div(row.querySelector(".session-moves"), {solved:`${moves}`}, false)
+    })
+}
+
 const fetchLogs = async (url, addLog, clearLogs, logsMessage) => {
     const { start_ts, end_ts, status, settings, error, log } = await fetchAPI(url, "GET", null, logsMessage) || {};
     if (!start_ts) return;
@@ -618,6 +721,7 @@ const fetchLogs = async (url, addLog, clearLogs, logsMessage) => {
 let logsOpId = null; //id of operation for which to fetch the logs
 let logsSleep = null;
 const cancelLogsOp = () => {
+    decFetchOps();
     logsOpId = null;
     if (logsSleep) {
         logsSleep();
@@ -628,7 +732,7 @@ const fetchLogsLoop = async (baseUrl, opId, addLog, clearLogs, logsMessage) => {
     fetchOpsCount++;
     logsOpId = opId
     while((opId == logsOpId) && (await fetchLogs(baseUrl + opId, addLog, clearLogs, logsMessage) == "active")) {
-        await sleep(4000, (slp) => { logsSleep = slp });
+        await sleep(5000, (slp) => { logsSleep = slp });
         logsSleep = null;
     }
     decFetchOps();
@@ -689,8 +793,7 @@ function exerciseCreationInit() {
         await renderLogs(logsEl, id, "generating with ChatGPT...");
     })
 
-    modalEl.addEventListener("hide.bs.modal", () => { cancelLogsOp() })
-    modalEl.addEventListener("hidden.bs.modal", () => { refreshDash() })
+    modalEl.addEventListener("hide.bs.modal", () => { cancelLogsOp(); refreshDash() })
     modalEl.addEventListener("shown.bs.modal", () => { 
         modalEl.querySelector("[type=submit]").disabled = false;
         creationInProgress = false;

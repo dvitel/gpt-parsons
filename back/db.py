@@ -41,10 +41,10 @@ def db_delete_exercise(ex):
     except Exception: #ignore error if key is absent
         return False    
 
-def db_create_exercise_raw(running_operation, exercise_raw):
+def db_create_exercise_raw(running_operation, settings, exercise_raw):
     container = db_container(f"exercise")
     exercise_id = str(uuid.uuid4())
-    exercise_raw = {"id": exercise_id, "pid": running_operation["id"], "status":"raw", "settings":running_operation["settings"], 
+    exercise_raw = {"id": exercise_id, "pid": running_operation["id"], "status":"raw", "settings":settings, 
                         "creation_ts": int(time()), "gen":exercise_raw}
     container.create_item(exercise_raw)
     return exercise_raw
@@ -62,3 +62,31 @@ def db_get_exercise_creation(op_id):
 def db_upsert_exercise_creation_process(running_operation):
     container = db_container("exercise_creation")        
     container.upsert_item(running_operation)
+
+def db_get_session(session_id, domain):
+    container = db_container("session")
+    session = next(container.query_items('SELECT * FROM session c WHERE c.id = @id', 
+                                                    parameters=[ {"name": "@id", "value": session_id} ], partition_key=domain), None)
+    return session    
+
+def db_upsert_session(session):
+    container = db_container("session")
+    container.upsert_item(session)
+
+def db_get_puzzle_for_session(domain, last_puzzle_id):
+    container = db_container("puzzle")
+    puzzle = next(container.query_items('SELECT * FROM puzzle c WHERE c.enabled=true ORDER BY c._ts DESC OFFSET @pid LIMIT 1', 
+                                                    parameters=[ {"name": "@pid", "value": last_puzzle_id} ], partition_key=domain), None)
+    if puzzle is None: 
+        return db_get_puzzle_for_session(domain, 0)
+    return {"puzzle":puzzle, "last_puzzle_id":last_puzzle_id+1}
+
+def db_get_exercise(ex_id):
+    container = db_container("exercise")
+    ex = next(container.query_items('SELECT * FROM exercise c WHERE c.id = @id', 
+                                                    parameters=[ {"name": "@id", "value": ex_id} ], enable_cross_partition_query=True), None)
+    return ex    
+
+def db_upsert_exercise(ex):
+    container = db_container("exercise")
+    container.upsert_item(ex)

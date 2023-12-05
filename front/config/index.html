@@ -62,12 +62,7 @@
                             <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false"
                                 data-url="https://gpt-parsons.azurewebsites.net/api/session"
                                 data-renderer="render_sessions">Sessions</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="contact-tab" data-bs-toggle="tab" data-bs-target="#contact-tab-pane" type="button" role="tab" aria-controls="contact-tab-pane" aria-selected="false" disable
-                                data-url="https://gpt-parsons.azurewebsites.net/api/stats"
-                                data-renderer="render_stats">Stats</button>
-                        </li>                        
+                        </li>               
                         <li class="nav-item ms-1" role="presentation">
                             <button class="btn btn-outline-success" data-bs-toggle="modal" data-bs-target="#create-modal" type="button">New</button>
                             <button class="btn btn-outline-secondary" onclick="refreshDash()" type="button">Refresh</button>
@@ -79,7 +74,7 @@
                                 <thead>
                                     <tr>
                                         <th scope="col">Status</th>
-                                        <th scope="col">Domain</th>
+                                        <th scope="col" style="width:15%">Domain</th>
                                         <!-- <th scope="col">Settings</th> -->
                                         <th scope="col" style="width:40%">Generated</th>
                                         <th scope="col">Validation</th>
@@ -108,6 +103,20 @@
                             </table>                            
                         </div>
                         <div class="tab-pane fade" id="contact-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+                            <table class="table align-middle">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">Time</th>
+                                        <th scope="col">Domain</th>
+                                        <th scope="col">Solved</th>
+                                        <th scope="col">Skipped</th>
+                                        <th scope="col">Mistakes</th>
+                                        <th scope="col">Moves</th>                                        
+                                    </tr>
+                                </thead>
+                                <tbody id="session-table">
+                                </tbody>                                    
+                            </table>                              
                         </div>
                     </div>
 
@@ -175,9 +184,9 @@
                         <div class="mb-2">
                             <div class="input-group mb-0">
                                 <label for="complexity" class="input-group-text"># lines</label>
-                                <input name="complexity" id="complexity" type="number" min="0" max="10" class="form-control" value="0" />                                
+                                <input name="complexity" id="complexity" type="number" min="0" max="30" class="form-control" value="0" />                                
                                 <label for="numErrors" class="input-group-text"># errors</label>
-                                <input name="numErrors" id="numErrors" type="number" min="0" max="10" class="form-control" value="0" />                            
+                                <input name="numErrors" id="numErrors" type="number" min="0" max="5" class="form-control" value="0" />                            
                             </div>
                             <div class="small text-end">0 - do not constrain GPT model in this aspect</div>
                         </div>
@@ -300,6 +309,38 @@
             </div>
         </div>
 
+        <div class="modal" tabindex="-1" id="history-modal">
+            <div class="modal-dialog">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Edit exercise</h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" style="max-height: 80vh;overflow-y: auto;">
+                    <form id="history-modal-form" data-modal-id="history-modal" 
+                        onsubmit="saveGenerated(event)" action="https://gpt-parsons.azurewebsites.net/api/exercise">
+                        <div class="mb-2">
+                            <label for="task">Task</label>
+                            <pre contenteditable="true" class="gen-ex-field ex-task mb-0 lh-sm">Put historical events in chronological order</pre>
+                        </div>
+                        <div class="mb-2">
+                            <label for="events">Events</label>
+                            <pre contenteditable="true" class="gen-ex-field ex-events mb-0 lh-sm"></pre>
+                        </div>
+                        <div class="mb-2">
+                            <label for="untrue">Unture</label>
+                            <pre contenteditable="true" class="gen-ex-field ex-untrue mb-0 lh-sm"></pre>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" form="history-modal-form" class="btn btn-primary" disabled>Save & Validate</button>
+                </div>
+              </div>
+            </div>
+        </div>
+
         <div class="modal" tabindex="-1" id="fragments-modal">
             <div class="modal-dialog">
               <div class="modal-content">
@@ -320,6 +361,12 @@
                             <label class="form-check-label" for="shuffleForEverySession">Shuffle for every session</label>
                         </div>
                     </div>
+                    <div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input puzzle-enabled" type="checkbox" id="shuffleForEverySession" checked>
+                            <label class="form-check-label" for="shuffleForEverySession">Puzzle is visible for students</label>
+                        </div>
+                    </div>                    
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
@@ -345,8 +392,6 @@
                     <option value="">Action</option>
                     <option value="gen_ex">Edit exercise</option>
                     <option value="validate_ex">Edit puzzle</option>
-                    <option value="disable_ex">Hide</option>
-                    <option value="enable_ex">Show</option>
                     <option value="delete_ex" class="text-danger">Delete</option>
                 </select>
                 <!-- <a href="#" class="exercise-details" data-bs-toggle="modal" data-bs-target="#details-modal">details</button> -->
@@ -366,7 +411,16 @@
                     <option value="delete_op" class="text-danger">Delete</option>
                 </select>
             </td>
-        </tr></template>        
+        </tr></template>     
+        
+        <template id="session-row"><tr class="lh-sm small">
+            <td scope="col" class="session-time"></td>
+            <td scope="col" class="session-domain"></td>
+            <td scope="col" class="session-solved"></td>
+            <td scope="col" class="session-skipped"></td>
+            <td scope="col" class="session-error"></td>
+            <td scope="col" class="session-moves"></td>
+        </tr></template>          
           
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
         <script src="./config/script.js?v=12"></script>

@@ -1,3 +1,14 @@
+let mainModal = null;
+let mainForm = null;
+let sessionId = null;
+let puzzleId = null;
+let currentFragments = {}
+let messageToastEl = null; //error/info messages in form of toast
+let puzzleStats = { moves: 0, start_ts: 0, end_ts: 0 } //only client side portion
+let emptyImg = document.createElement('img')
+emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+let moves = 0;
+let numChanges = 0;
 
 const sleep = (ms, wakeupReg = () => {}) => {
     let resolveRes = null;
@@ -71,11 +82,10 @@ const newCodeTag = (codeText, codeLang, highlighted = true) => {
 let fetchOpsCount = 0;
 const decFetchOps = () => {
     fetchOpsCount--;    
-    if (fetchOpsCount == 0) {
+    if (fetchOpsCount <= 0) {
+        fetchOpsCount = 0;
         hideInform = true;
         after(300, () => { if (hideInform) inform() }); //hide toast
-    } else if (fetchOpsCount < 0) {
-        fetchOpsCount = 0;
     }
 }
 
@@ -122,69 +132,50 @@ const fetchAPI = async (url, method="GET", data=null, progressMsg="loading...", 
 const elIndex = (el) => [...el.parentElement.children].indexOf(el)
 
 const findFragEl = (el, i = 0) => {
+    if (el == null) return null;
     if (i == 10) return null;
     if (el.classList.contains("fragment")) return el;
     return findFragEl(el.parentElement, i+1);
 }
 
-//https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle
-//https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
-function shuffle(array) {
-    let currentIndex = array.length;
-    // While there remain elements to shuffle.
-    while (currentIndex > 0) {
-      // Pick a remaining element.
-      let randomIndex = Math.floor(Math.random() * currentIndex);
-      currentIndex--;
-      // And swap it with the current element.
-      [array[currentIndex], array[randomIndex]] = [array[randomIndex], array[currentIndex]];
-    }
-    return array;
-}
-
-let currentFragments = {}
-
 function dropFragment(event) {
     event.preventDefault();
     const fragmentIdStr = event.dataTransfer.getData("text/plain");
-    const fragment = currentFragments[fragmentIdStr];
-    fragment.el.focus({preventScroll:true})
+    const frel = currentFragments[fragmentIdStr];
+    frel.focus({preventScroll:true})
 }
 
 function dragoverFragment(event) {
     event.preventDefault();
     const fragmentIdStr = event.dataTransfer.getData("text/plain");
-    const fragment = currentFragments[fragmentIdStr];
+    const frel = currentFragments[fragmentIdStr];
     const bellowEl = findFragEl(event.target);
-    if (bellowEl != null && fragment.el != bellowEl) {
-        let curIndex = elIndex(fragment.el);
+    if (bellowEl != null && frel != bellowEl) {
+        let curIndex = elIndex(frel);
         let otherIndex = elIndex(bellowEl);
-        if (curIndex < otherIndex) bellowEl.after(fragment.el);
-        else if (curIndex > otherIndex) bellowEl.before(fragment.el);
+        if (curIndex < otherIndex) {
+            bellowEl.after(frel);
+            numChanges++  
+        } else if (curIndex > otherIndex) {
+            bellowEl.before(frel);
+            numChanges++;
+        }
     }    
 }
 
-async function initPuzzle(id) {    
-    let parsonsModalEl = document.getElementById("fragments-modal")     
-    const saveBtlEl = parsonsModalEl.querySelector(".save-puzzle")
-    saveBtlEl.dataset.id = id
-    saveBtlEl.dataset.domain = domain
-    //first fetch existign puzzle if any     
-    let { task, fragments, distractors, shuffled = false } = 
-        await fetchAPI(saveBtlEl.dataset.url + "/" + id, "GET", null, "loading puzzle...", true) || {}
-    parsonsModalEl.querySelector(".puzzle-task").innerHTML = task 
-    parsonsModalEl.querySelector(".puzzle-shuffle").checked = shuffled
-    currentFragments = {}           
+function initPuzzle({ id, domain, task = "Put fragments in correct order. Trash wrong fragments.", fragments, distractors } = {}) {    
+    puzzleId = id;
+    mainForm.querySelector(".puzzle-task").innerHTML = task;
+    currentFragments = {}
     let fragmentId = 0
     let bin = [
         ...fragments.map(f => ({f})),
-        ...((distractors.length > 0) ? [{f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true}] : []),
-        ...distractors.map(f => ({f, cls:["bg-light"]}))
+        {f:"Trash wrong fragments bellow", cls:["border-secondary", "fw-bold", "text-white", "bg-secondary", "mb-0", "lh-1", "delim"], noCode:true},
+        ...distractors.map(f => ({f}))
     ]
-    if (shuffled) bin = shuffle(bin);
-    const binEl = parsonsModalEl.querySelector(".fragments");
+    const binEl = mainForm.querySelector(".fragments");
     clearEl(binEl) 
-    bin.forEach(({f, cls = [], noCode = false}, i) => {
+    bin.forEach(({f, cls = [], noCode = false}) => {
         let codeEl = null; 
         if (noCode) {
             codeEl = document.createElement("pre")
@@ -198,15 +189,21 @@ async function initPuzzle(id) {
         codeEl.tabIndex = 0;
         codeEl.lastChild.tabIndex = -1;
         let fragmentIdStr = `${fragmentId}`
-        currentFragments[fragmentIdStr] = {pos:i, bin:".fragments", el:codeEl}
+        currentFragments[fragmentIdStr] = codeEl
         codeEl.addEventListener("click", (ev) => {
             codeEl.focus({preventScroll:true, focusVisible:true})
+            if (numChanges > 0) {
+                numChanges = 0;
+                moves++;
+            }
         })
         codeEl.addEventListener("keyup", (ev) => {
             if ((ev.code == "ArrowUp") && codeEl.previousElementSibling) {
                 codeEl.previousElementSibling.before(codeEl)
+                numChanges++;
             } else if ((ev.code == "ArrowDown") && codeEl.nextElementSibling) {
-                codeEl.nextElementSibling.after(codeEl)
+                codeEl.nextElementSibling.after(codeEl) 
+                numChanges++;
             }
             codeEl.focus({preventScroll:true})
         })
@@ -216,6 +213,10 @@ async function initPuzzle(id) {
             ev.dataTransfer.setData("text/plain", fragmentIdStr)
             ev.dataTransfer.effectAllowed = "move";
             ev.dataTransfer.setDragImage(emptyImg, 0, 0)
+            if (numChanges > 0) {
+                numChanges = 0;
+                moves++;
+            }
         })
         codeEl.addEventListener("dragend", (ev) => {
             // ev.target.classList.remove("border-primary")
@@ -226,11 +227,97 @@ async function initPuzzle(id) {
     })
 }
 
-async function initSession() {
-    let { task, fragments, distractors, shuffled = false } = await fetchAPI(saveBtlEl.dataset.url + "/" + id, "GET", null, "loading puzzle...", true) || {}    
+async function resetSession() {
+    let domain = mainForm.querySelector("[name=domain]").value
+    localStorage.removeItem(`${domain}_session`)
+    await initSession(domain) //restarts puzzles
+}
+
+async function continueSession() {
+    let { puzzle } = await fetchAPI(mainForm.action + "/" + sessionId, "GET") || {}
+    if (!puzzle) return; //error 
+    initPuzzle(puzzle);
+}
+
+async function initSession(domain) {
+    moves = 0;
+    let prevSessionId = localStorage.getItem(`${domain}_session`)
+    if (prevSessionId) {
+        sessionId = prevSessionId;
+        console.log(`continue session ${sessionId} ${domain}`)
+        await continueSession();
+    } else {
+        let data = {domain}
+        if (sessionId) data.prevSessionId = sessionId;
+        let { id: sid, puzzle } = await fetchAPI(mainForm.action, "POST", data) || {}
+        if (!sid) return; //error 
+        if (sid == sessionId) {
+            console.log(`continue session ${sessionId} ${domain}`)
+        } else {
+            sessionId = sid;                
+            console.log(`starting session ${sessionId} ${domain}`)
+        }
+        localStorage.setItem(`${domain}_session`, sid);
+        initPuzzle(puzzle);
+    }
+}
+
+async function domainChanged(domain) {
+    console.log("domain changed to", domain);
+    await initSession(domain);
+}
+
+function showHint(event) {
+    let hint = event.target.dataset.hint;
+    inform(hint, false, ["text-info"]);
+}
+
+async function submitPuzzle(event) {
+    event.preventDefault();
+    // const data = new FormData(event.currentTarget);
+    // const plainFormData = Object.fromEntries(data.entries());
+    const fragments = []
+    const distractors = [];
+    let curList = fragments;
+    [...mainForm.querySelectorAll(".fragment")].forEach(frEl => {
+        if (frEl.classList.contains("delim")) curList = distractors;
+        else curList.push(frEl.innerText);    
+    })
+
+    let skip = event.submitter.name == "skip"
+    if (numChanges > 0) {
+        numChanges = 0;
+        moves++;
+    }    
+    let data = { fragments, stats: { moves }, skip}
+    let { solved, puzzle, hint, reset = false } = await fetchAPI(mainForm.action + "/" + sessionId, "PUT", data) || {}
+    if (typeof solved == "undefined") return;     
+    moves = 0;
+    if (reset) {
+        inform("Exercise was deleted. Fetching new one...")
+        await resetSession();
+        return;
+    }
+    let hintBtn = mainModal.querySelector(".hint")
+    if (hint) {        
+        hintBtn.classList.remove("d-none")
+        hintBtn.dataset.hint = hint; 
+    } else {
+        hintBtn.classList.add("d-none");
+    }
+    if (solved) {
+        inform("Puzzle solved correctly!", false, ["text-success", "fw-bold"])   
+    } else if (!puzzle) {
+        inform("You solution contains errors!", false, ["text-danger", "fw-bold"])     
+    }
+    if (puzzle) initPuzzle(puzzle);
 }
 
 const showModal = (id) => bootstrap.Modal.getOrCreateInstance("#" + id).show();
 document.addEventListener("DOMContentLoaded", async () => {
     showModal("main-modal")
+    mainModal = document.getElementById("main-modal")
+    messageToastEl = document.getElementById('message')
+    mainForm = mainModal.querySelector("form");
+    domainChanged(mainForm.querySelector("[name=domain]").value);
 })
