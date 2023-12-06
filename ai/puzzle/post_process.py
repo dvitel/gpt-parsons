@@ -4,8 +4,8 @@ import sys
 #https://microsoft.github.io/promptflow/cloud/azureai/deploy-to-azure-appservice.html
 
 @tool
-def postprocess(domain: str = "", prog: str = "", hist: str = "", chain: str = "") -> str:
-    res = {"programming": prog, "history": hist, "chain": chain}
+def postprocess(domain: str = "", prog: str = "", hist: str = "", chain: str = "", gpt_prog: str = "") -> str:
+    res = {"programming": prog, "history": hist, "chain": chain, "gpt_programming": gpt_prog}
     if domain == "": 
         return {"error": "AuthError", "message": f"Flow key missmatch"}
     elif domain in res:

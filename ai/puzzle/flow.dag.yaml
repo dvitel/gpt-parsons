@@ -107,21 +107,7 @@ nodes:
     prog: ${gen_program.output}
     hist: ${gen_history.output}
     chain: ${gen_chain.output}
-- name: gen_6_validate
-  type: python
-  source:
-    type: code
-    path: gen_6_validate.py
-  inputs: {}
-- name: gen_5_bug
-  type: llm
-  source:
-    type: code
-    path: gen_5_bug.jinja2
-  inputs:
-    model: gpt-3.5-turbo
-  connection: prod_conn
-  api: chat
+    gpt_prog: ${gen_wrapper.output}
 - name: gen_3_code
   type: llm
   source:
@@ -132,9 +118,9 @@ nodes:
   inputs:
     model: gpt-3.5-turbo
     topic: ${inputs.topic}
-    title: ${gen_1_title.output.title}
-    task: ${gen_1_title.output.task}
-    pseudocode: ${gen_2_description.output.code}
+    pseudocode: ${gen_2_description.output}
+    language: ${inputs.domain}
+    title: ${gen_1_title.output}
   connection: prod_conn
   api: chat
 - name: gen_2_description
@@ -146,8 +132,7 @@ nodes:
     model: gpt-3.5-turbo
     max_tokens: 3900
     topic: ${inputs.topic}
-    title: ${gen_1_title.output.title}
-    task: ${gen_1_title.output.task}
+    title: ${gen_1_title.output}
   connection: prod_conn
   api: chat
 - name: gen_1_title
@@ -166,3 +151,59 @@ nodes:
   activate:
     when: ${preprocess.output.domain}
     is: programming
+- name: gen_4_test
+  type: llm
+  source:
+    type: code
+    path: gen_4_test.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+    code: ${gen_3_code}
+    language: ${inputs.domain}
+  connection: prod_conn
+  api: chat
+- name: gen_5_bug
+  type: llm
+  source:
+    type: code
+    path: gen_5_bug.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    code: ${gen_3_code.output}
+    language: ${inputs.domain}
+    level: ${inputs.level}
+    bugs: ${inputs.numErrors}
+  connection: prod_conn
+  api: chat
+- name: gen_wrapper
+  type: python
+  source:
+    type: code
+    path: gen_wrapper.py
+  inputs:
+    task: ${gen_6_task.output}
+    code: ${gen_3_code.output}
+    incorrect: ${gen_5_bug.output}
+    tests: ${gen_4_test.output}
+    explain: ${gen_7_explain.output}
+- name: gen_6_task
+  type: llm
+  source:
+    type: code
+    path: gen_6_task.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    code: ${gen_3_code.output}
+  connection: prod_conn
+  api: chat
+- name: gen_7_explain
+  type: llm
+  source:
+    type: code
+    path: gen_7_explain.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    bug: ${gen_5_bug.output}
+  connection: prod_conn
+  api: chat

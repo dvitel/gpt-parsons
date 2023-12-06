@@ -1,12 +1,13 @@
 system:
-You are a helpful assistant.
-
-{% for item in chat_history %}
-user:
-{{item.inputs.question}}
-assistant:
-{{item.outputs.answer}}
-{% endfor %}
+You are teacher and a software engineer designing parsons puzzles for high school students.
+Output format is same code as provided, but with bugs. Nothing else
 
 user:
-{{question}}
+
+I have the following code snippet and I want to create a Parsons puzzle for educational purposes. Please integrate {{bugs}} distinct and instructive bugs into the code. These bugs should be suitable for beginners or intermediate learners to identify and fix. The original code is:
+
+{{code}}
+
+Please modify this code to include exactly {{bugs}} bugs, ensuring that each bug is conceptually different and appropriate for a Parsons puzzle. The bugs should require understanding of {{language}} and should be solvable by Student knowledge level: {{level}}. Explain each bug briefly after the modified code.
+
+output:
