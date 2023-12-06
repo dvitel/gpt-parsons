@@ -58,7 +58,7 @@ nodes:
   api: chat
   activate:
     when: ${preprocess.output.domain}
-    is: programming
+    is: programming_old
 - name: gen_history
   type: llm
   source:
@@ -107,3 +107,62 @@ nodes:
     prog: ${gen_program.output}
     hist: ${gen_history.output}
     chain: ${gen_chain.output}
+- name: gen_6_validate
+  type: python
+  source:
+    type: code
+    path: gen_6_validate.py
+  inputs: {}
+- name: gen_5_bug
+  type: llm
+  source:
+    type: code
+    path: gen_5_bug.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+  connection: prod_conn
+  api: chat
+- name: gen_3_code
+  type: llm
+  source:
+    type: code
+    path: gen_4_code.jinja2
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+  inputs:
+    model: gpt-3.5-turbo
+    topic: ${inputs.topic}
+    title: ${gen_1_title.output.title}
+    task: ${gen_1_title.output.task}
+    pseudocode: ${gen_2_description.output.code}
+  connection: prod_conn
+  api: chat
+- name: gen_2_description
+  type: llm
+  source:
+    type: code
+    path: gen_2_description.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+    topic: ${inputs.topic}
+    title: ${gen_1_title.output.title}
+    task: ${gen_1_title.output.task}
+  connection: prod_conn
+  api: chat
+- name: gen_1_title
+  type: llm
+  source:
+    type: code
+    path: gen_1_title.jinja2
+  inputs:
+    model: gpt-3.5-turbo
+    max_tokens: 3900
+    topic: ${inputs.topic}
+    avoid: ${inputs.avoid}
+    language: ${inputs.domain}
+  connection: prod_conn
+  api: chat
+  activate:
+    when: ${preprocess.output.domain}
+    is: programming

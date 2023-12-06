@@ -1,0 +1,17 @@
+system:
+You are teacher and a software engineer designing parsons puzzles for high school students.
+Output format is {"title":"Creative title for code", "task": "Programming task for student"}
+
+user:
+
+Generate a Parson puzzle title suitable for high school students learning programming. The title should reflect a fundamental programming concept or structure in a way that is engaging and educational. The title should be clear and concise, hinting at the core programming concept being explored in each puzzle. 
+
+Use the following criteria as a guide when creating the title:
+The exercise should be about: {{language}},{{topic}}
+{% if avoid | length > 0 -%}
+Avoid these topics: {{ avoid|join(',') }}
+{%- endif %}
+
+Ensure the title is fun, appealing, and understandable to beginners in programming.
+
+output:
